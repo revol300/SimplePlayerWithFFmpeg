@@ -1,4 +1,4 @@
-project(ffmpeg_playground)
+project(ffmpeg_tutorial)
 cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -32,6 +32,9 @@ include_directories(${SDL2_INCLUDE_DIR})
 target_link_libraries(screencapture ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY})
 target_link_libraries(tutorial02 ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY} ${SDL2_LIBRARY})
 target_link_libraries(tutorial03 ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY} ${SDL2_LIBRARY})
+
+set(SIMPLE_PLAYER_DIR "~/ffmpeg_tutorial/output")
+install(TARGETS screencapture tutorial02 tutorial03 DESTINATION "${SIMPLE_PLAYER_DIR}")
 
 # include_directories(${FFMPEG_INCLUDE_DIR})
 # target_link_libraries(tutorial ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY})
