@@ -19,7 +19,6 @@ public:
   ~ScreenCapture();
 
   void setURL(std::string const& filename);
-  void release();
   void captureFrames(int frame_count);
   int init();
 private:

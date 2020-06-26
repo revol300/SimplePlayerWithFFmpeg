@@ -117,13 +117,6 @@ void ScreenCapture::captureFrames(int frame_count) {
   av_frame_free(&pFrame);
 }
 
-void ScreenCapture::release() {
-  if(fmt_ctx_ != NULL)
-  {
-    avformat_close_input(&fmt_ctx_);
-  }
-}
-
 int ScreenCapture::init() {
 
   //this function only looks at the header
