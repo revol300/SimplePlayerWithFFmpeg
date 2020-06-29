@@ -30,11 +30,11 @@ VideoPlayer::~VideoPlayer() {
     avcodec_free_context(&video_codec_context_);
 }
 
-void VideoPlayer::setURL(string const& filename){
+void VideoPlayer::setURL(string const& filename) {
   file_path_ = filename;
 }
 
-int VideoPlayer::openFile(){
+int VideoPlayer::openFile() {
   //this function only looks at the header
   if(avformat_open_input(&fmt_ctx_, file_path_.c_str(), NULL, NULL) < 0) {
     cout << "Could not open input file " <<   file_path_ << endl;
