@@ -1,5 +1,6 @@
 #include "video_player.h"
 
+
 VideoPlayer::VideoPlayer() : fmt_ctx_(NULL),
                              video_index_(-1),
                              video_codec_(nullptr),
