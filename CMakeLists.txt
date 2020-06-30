@@ -44,7 +44,7 @@ target_link_libraries(tutorial02 ${FFMPEG_LIBS} SDL2)
 target_link_libraries(tutorial03 ${FFMPEG_LIBS} SDL2)
 target_link_libraries(videoplayer ${FFMPEG_LIBS} SDL2)
 
-set(SIMPLE_PLAYER_DIR "../output")
+set(SIMPLE_PLAYER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../output")
 # install(TARGETS screencapture DESTINATION "${SIMPLE_PLAYER_DIR}")
 install(TARGETS screencapture tutorial02 tutorial03 videoplayer DESTINATION "${SIMPLE_PLAYER_DIR}")
 
