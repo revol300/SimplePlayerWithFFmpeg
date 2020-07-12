@@ -26,11 +26,13 @@ private:
   int openFile();
   int openWindow();
   string file_path_;
-  int video_index_;
+  int video_index_, audio_index_;
   AVFormatContext* fmt_ctx_;
 
   AVCodec* video_codec_;
+  AVCodec* audio_codec_;
   AVCodecContext* video_codec_context_;
+  AVCodecContext* audio_codec_context_;
   struct SwsContext *sws_ctx;
   SDL_Event event;
   SDL_Window *screen;
