@@ -39,12 +39,8 @@ typedef struct PacketQueue {
   SDL_cond *cond;
 } PacketQueue;
 
-static AVCodecContext  *aCodecCtx;
-static PacketQueue audioq;
-static uint8_t audio_buf[(MAX_AUDIO_FRAME_SIZE * 3) / 2];
-static unsigned int audio_buf_size;
-static unsigned int audio_buf_index;
-static int quit;
+PacketQueue audioq;
+int quit = 0;
 
 void packet_queue_init(PacketQueue *q) {
   memset(q, 0, sizeof(PacketQueue));
@@ -52,87 +48,115 @@ void packet_queue_init(PacketQueue *q) {
   q->cond = SDL_CreateCond();
 }
 
-int packet_queue_put(PacketQueue *q, AVPacket *pkt) {
-  /* cout << "put queue" << endl; */
-  AVPacketList *pkt1;
-  pkt1 = (AVPacketList*)av_malloc(sizeof(AVPacketList));
-  if (!pkt1)
-    return -1;
-  av_init_packet(&pkt1->pkt);
-  av_packet_ref(&pkt1->pkt, pkt);
-  /* memcpy((void*)&pkt1->pkt, (void*)pkt, sizeof(AVPacket)); */
-  pkt1->next = NULL;
-  SDL_LockMutex(q->mutex);
-  if (!q->last_pkt) {
-    q->first_pkt = pkt1;
-  } else {
-    q->last_pkt->next = pkt1;
-  }
-  q->last_pkt = pkt1;
-  q->nb_packets++;
-  q->size += pkt1->pkt.size;
-  SDL_CondSignal(q->cond);
-  SDL_UnlockMutex(q->mutex);
-  return 0;
+/* int packet_queue_put(PacketQueue *q, AVPacket *pkt) {
+ *   AVPacketList *pkt1;
+ *   pkt1 = (AVPacketList*)av_malloc(sizeof(AVPacketList));
+ *   if (!pkt1)
+ *     return -1;
+ *   av_init_packet(&pkt1->pkt);
+ *   av_packet_ref(&pkt1->pkt, pkt);
+ *   pkt1->next = NULL;
+ *   SDL_LockMutex(q->mutex);
+ *   cout << "pkt1 size : " <<pkt1->pkt.size;
+ *   if (!q->last_pkt) {
+ *     q->first_pkt = pkt1;
+ *   } else {
+ *     q->last_pkt->next = pkt1;
+ *   }
+ *   q->last_pkt = pkt1;
+ *   q->nb_packets++;
+ *   q->size += pkt1->pkt.size;
+ *   SDL_CondSignal(q->cond);
+ *   SDL_UnlockMutex(q->mutex);
+ *   return 0;
+ * } */
+
+int packet_queue_put_private(PacketQueue *q, AVPacket *pkt)
+{
+    AVPacketList *pkt1;
+
+    printf("queue put private \n");
+    pkt1 = (AVPacketList*)av_malloc(sizeof(AVPacketList));
+    if (!pkt1)
+        return -1;
+    pkt1->pkt = *pkt;
+    pkt1->next = NULL;
+    
+    if (!q->last_pkt)
+        q->first_pkt = pkt1;
+    else
+        q->last_pkt->next = pkt1;
+    q->last_pkt = pkt1;
+    q->nb_packets++;
+    q->size += pkt1->pkt.size + sizeof(*pkt1);
+    /* XXX: should duplicate packet data in DV case */
+    SDL_CondSignal(q->cond);
+    return 0;
 }
 
-static int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block)
+int packet_queue_put(PacketQueue *q, AVPacket *pkt)
 {
+    int ret;
 
-  /* cout << "packet queue get : " << __LINE__ << endl; */
-  AVPacketList *pkt1;
-  int ret;
-  
-  SDL_LockMutex(q->mutex);
-  for(;;) {
-    if(quit) {
-      ret = -1;
-      break;
+    SDL_LockMutex(q->mutex);
+    ret = packet_queue_put_private(q, pkt);
+    SDL_UnlockMutex(q->mutex);
+    return ret;
+}
+
+int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block) {
+    printf("get queue \n");
+    AVPacketList *pkt1;
+    int ret;
+
+    SDL_LockMutex(q->mutex);
+    for (;;) {
+        pkt1 = q->first_pkt;
+        if (pkt1) {
+            printf("get queue %d", __LINE__);
+            q->first_pkt = pkt1->next;
+            if (!q->first_pkt)
+                q->last_pkt = NULL;
+            q->nb_packets--;
+            q->size -= pkt1->pkt.size + sizeof(*pkt1);
+            *pkt = pkt1->pkt;
+            av_free(pkt1);
+            ret = 1;
+            break;
+        } else if (!block) {
+            printf("get queue %d", __LINE__);
+            ret = 0;
+            break;
+        } else {
+            /* cout << "get queue " << __LINE__ << endl; */
+            SDL_CondWait(q->cond, q->mutex);
+        }
     }
-    pkt1 = q->first_pkt;
-    if (pkt1) {
-      q->first_pkt = pkt1->next;
-      if (!q->first_pkt)
-        q->last_pkt = NULL;
-      q->nb_packets--;
-      q->size -= pkt1->pkt.size;
-      *pkt = pkt1->pkt;
-      av_free(pkt1);
-      ret = 1;
-      break;
-    } else if (!block) {
-      ret = 0;
-      break;
-    } else {
-      SDL_CondWait(q->cond, q->mutex);
-      break;
-    }
-  }
-  SDL_UnlockMutex(q->mutex);
-  return ret;
+    SDL_UnlockMutex(q->mutex);
+    printf("pkt size : %d \n", pkt->size);
+    return ret;
 }
 
 int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_size) {
 
   /* cout << "audio decode frame : " << __LINE__ << endl; */
-  static AVPacket pkt;
-  static uint8_t *audio_pkt_data = NULL;
-  static int audio_pkt_size = 0;
-  static AVFrame frame;
+  AVPacket* pkt = av_packet_alloc();
+  uint8_t *audio_pkt_data = NULL;
+  int audio_pkt_size = 0;
+  AVFrame* frame = av_frame_alloc();
 
   int len1, data_size = 0;
 
   for(;;) {
     while(audio_pkt_size > 0) {
       int got_frame = 0;
-      len1 = avcodec_send_packet(aCodecCtx, &pkt);
+      len1 = avcodec_send_packet(aCodecCtx, pkt);
       bool frameFinished = 0;
       if (!(len1 < 0 && len1 != AVERROR(EAGAIN) && len1 != AVERROR_EOF)) {
         if (len1 >= 0)
-          pkt.size = 0;
-        len1 = avcodec_receive_frame(aCodecCtx, &frame);
+          pkt->size = 0;
+        len1 = avcodec_receive_frame(aCodecCtx, frame);
         if (len1 >= 0) {
-          cout << "got frame !!!" << endl;
           frameFinished = 1;
         }
       }
@@ -145,42 +169,54 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
       if(got_frame) {
         data_size = av_samples_get_buffer_size(NULL,
             aCodecCtx->channels,
-            frame.nb_samples,
+            frame->nb_samples,
             aCodecCtx->sample_fmt,
             1);
         assert(data_size <= buf_size);
-        memcpy(audio_buf, frame.data[0], data_size);
+        memcpy(audio_buf, frame->data[0], data_size);
       }
       if(data_size <= 0) {
         /* No data yet, get more frames */
         continue;
       }
       /* We have data, return it and come back for more later */
+      av_frame_free(&frame);
       return data_size;
     }
-    if(pkt.data)
-      av_packet_unref(&pkt);
+    if(pkt->data)
+      av_packet_free(&pkt);
 
     if(quit) {
+      av_frame_free(&frame);
       return -1;
     }
 
-    if(packet_queue_get(&audioq, &pkt, 1) < 0) {
+    if(packet_queue_get(&audioq, pkt, 1) < 0) {
+      av_frame_free(&frame);
       exit(-1);
       return -1;
     }
 
-    audio_pkt_data = pkt.data;
-    audio_pkt_size = pkt.size;
+    audio_pkt_data = pkt->data;
+    audio_pkt_size = pkt->size;
   }
+  av_frame_free(&frame);
 }
 
-static void audio_callback(void *userdata, Uint8 *stream, int len) {
+uint8_t audio_buf[(MAX_AUDIO_FRAME_SIZE * 3) / 2];
+unsigned int audio_buf_size;
+unsigned int audio_buf_index;
 
-  cout << "audio callback called" << endl;
+void audio_callback(void *userdata, Uint8 *stream, int len) {
+
+  printf("audio callback called \n");
 
   AVCodecContext *aCodecCtx = (AVCodecContext *)userdata;
   int len1, audio_size;
+
+  audio_buf[(MAX_AUDIO_FRAME_SIZE * 3) / 2];
+  audio_buf_size = 0;
+  audio_buf_index = 0;
 
   while(len > 0) {
     if(audio_buf_index >= audio_buf_size) {
@@ -207,12 +243,8 @@ static void audio_callback(void *userdata, Uint8 *stream, int len) {
 }
 
 int main(int argc, char *argv[]) {
-    static AVCodecContext  *aCodecCtx = NULL;
-    static PacketQueue audioq;
-    static uint8_t audio_buf[(MAX_AUDIO_FRAME_SIZE * 3) / 2];
-    static unsigned int audio_buf_size = 0;
-    static unsigned int audio_buf_index = 0;
-    static int quit = 0;
+    /* av_log_set_level(AV_LOG_TRACE); */
+    AVCodecContext *aCodecCtx;
 
     AVFormatContext *pFormatCtx = NULL;
     int videoStream, audioStream;
@@ -295,11 +327,9 @@ int main(int argc, char *argv[]) {
   wanted_spec.samples = SDL_AUDIO_BUFFER_SIZE;
   wanted_spec.callback = audio_callback;
   wanted_spec.userdata = aCodecCtx;
-  cout << "aCodecCtx : " << aCodecCtx;
 
   auto dev = SDL_OpenAudioDevice(NULL, 0, &wanted_spec, &spec, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
   if (dev == 0) {
-    cout << "open audio device failed" << endl;
     exit(-1);
   } else {
     if (wanted_spec.format != spec.format) { /* we let this one thing change. */
@@ -446,7 +476,6 @@ int main(int argc, char *argv[]) {
         } else if(packet.stream_index==audioStream) {
           /* if(packet.stream_index==audioStream) {  */
           if(!audio_start) {
-            cout << "audio start !!" << endl;
             SDL_PauseAudio(0);
             SDL_PauseAudioDevice(dev, 0);
             audio_start = true;
