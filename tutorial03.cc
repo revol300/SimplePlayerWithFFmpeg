@@ -113,7 +113,7 @@ int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block) {
     for (;;) {
         pkt1 = q->first_pkt;
         if (pkt1) {
-            printf("get queue %d", __LINE__);
+            printf("get queue %d\n", __LINE__);
             q->first_pkt = pkt1->next;
             if (!q->first_pkt)
                 q->last_pkt = NULL;
@@ -132,6 +132,7 @@ int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block) {
             SDL_CondWait(q->cond, q->mutex);
         }
     }
+    cout << "get packet : " << pkt <<endl;
     SDL_UnlockMutex(q->mutex);
     printf("pkt size : %d \n", pkt->size);
     return ret;
@@ -150,14 +151,20 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
   for(;;) {
     while(audio_pkt_size > 0) {
       int got_frame = 0;
+      cout << "send packet !! " << endl;
+      /* int frameFinished = 0;
+       * len1 = avcodec_decode_audio4(aCodecCtx, frame, &frameFinished, pkt); */
       len1 = avcodec_send_packet(aCodecCtx, pkt);
+      cout << "len1 : " <<len1 << endl;
       bool frameFinished = 0;
       if (!(len1 < 0 && len1 != AVERROR(EAGAIN) && len1 != AVERROR_EOF)) {
         if (len1 >= 0)
           pkt->size = 0;
+        cout << "receive packet !! " << endl;
         len1 = avcodec_receive_frame(aCodecCtx, frame);
         if (len1 >= 0) {
           frameFinished = 1;
+          cout << "got frame !!" << endl;
         }
       }
 
@@ -183,8 +190,8 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
       av_frame_free(&frame);
       return data_size;
     }
-    if(pkt->data)
-      av_packet_free(&pkt);
+    /* if(pkt->data)
+     *   av_packet_unref(pkt); */
 
     if(quit) {
       av_frame_free(&frame);
@@ -321,21 +328,27 @@ int main(int argc, char *argv[]) {
   SDL_memset(&wanted_spec, 0, sizeof(wanted_spec)); /* or SDL_zero(want) */
   wanted_spec.freq = aCodecCtx->sample_rate;
   wanted_spec.format = AUDIO_S16SYS;
-  av_get_channel_layout_nb_channels(aCodecCtx->channels);
+  /* av_get_channel_layout_nb_channels(aCodecCtx->channels); */
   wanted_spec.channels = aCodecCtx->channels;
+  cout << "aCodecCtx channel : " << aCodecCtx->channels << endl;
   wanted_spec.silence = 0;
   wanted_spec.samples = SDL_AUDIO_BUFFER_SIZE;
   wanted_spec.callback = audio_callback;
   wanted_spec.userdata = aCodecCtx;
 
-  auto dev = SDL_OpenAudioDevice(NULL, 0, &wanted_spec, &spec, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+  auto dev = SDL_OpenAudioDevice(NULL, 0, &wanted_spec, &spec, SDL_AUDIO_ALLOW_FORMAT_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
   if (dev == 0) {
     exit(-1);
   } else {
     if (wanted_spec.format != spec.format) { /* we let this one thing change. */
     }
   }
-  avcodec_open2(aCodecCtx, aCodec, NULL);
+  cout << "wanted spec channel : " <<  wanted_spec.channels << endl;
+  cout << "actual spec channel : " <<  spec.channels << endl;
+  if(avcodec_open2(aCodecCtx, aCodec, NULL) < 0){
+    cout << "codec open failed" << endl; 
+    return -1;
+  }
   packet_queue_init(&audioq);
   bool audio_start = false;
 
