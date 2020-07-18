@@ -39,10 +39,21 @@ typedef struct PacketQueue {
   SDL_cond *cond;
 } PacketQueue;
 
+typedef struct AudioParams {
+  int freq;
+  int channels;
+  int64_t channel_layout;
+  enum AVSampleFormat fmt;
+  int frame_size;
+  int bytes_per_sec;
+} AudioParams;
+
 PacketQueue audioq;
 SDL_AudioSpec spec;
 SwrContext* swr_ctx;
 int quit = 0;
+AudioParams audio_hw_params_tgt;
+AudioParams audio_hw_params_src;
 
 void packet_queue_init(PacketQueue *q) {
   memset(q, 0, sizeof(PacketQueue));
@@ -112,9 +123,10 @@ int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block) {
     return ret;
 }
 
-uint8_t audio_buf1[(MAX_AUDIO_FRAME_SIZE * 3) / 2];
 
-int converting(AVCodecContext *aCodecCtx, AVFrame* frame) {
+int converting(AVCodecContext *aCodecCtx, AVFrame* frame, uint8_t *audio_buf) {
+  uint8_t* audio_buf1;
+  unsigned int audio_buf1_size = 0;
   int data_size = av_samples_get_buffer_size(NULL,
       aCodecCtx->channels,
       frame->nb_samples,
@@ -146,18 +158,14 @@ int converting(AVCodecContext *aCodecCtx, AVFrame* frame) {
     int len2;
     if (out_size < 0) {
       av_log(NULL, AV_LOG_ERROR, "av_samples_get_buffer_size() failed\n");
-      return -1;
+         return -1;
     }
-    /* if (wanted_nb_samples != af->frame->nb_samples) {
-     *   if (swr_set_compensation(is->swr_ctx, (wanted_nb_samples - af->frame->nb_samples) * is->audio_tgt.freq / af->frame->sample_rate,
-     *         wanted_nb_samples * is->audio_tgt.freq / af->frame->sample_rate) < 0) {
-     *     av_log(NULL, AV_LOG_ERROR, "swr_set_compensation() failed\n");
-     *     return -1;
-     *   }
-     * } */
-    /* av_fast_malloc(&audio_buf1, &audio_buf1_size, out_size); */
+
+    audio_buf1 = (uint8_t*) av_malloc(out_size);
+    /* av_malloc(&audio_buf1, &audio_buf1_size, out_size); */
     if (!audio_buf1)
       return AVERROR(ENOMEM);
+
     len2 = swr_convert(swr_ctx, &audio_buf1, out_count, in, frame->nb_samples);
     if (len2 < 0) {
       av_log(NULL, AV_LOG_ERROR, "swr_convert() failed\n");
@@ -167,12 +175,98 @@ int converting(AVCodecContext *aCodecCtx, AVFrame* frame) {
       if (swr_init(swr_ctx) < 0)
         swr_free(&swr_ctx);
     }
-    audio_buf = audio_buf1;
+
     resampled_data_size = len2 * spec.channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+    memcpy(audio_buf, audio_buf1, resampled_data_size);
+    return resampled_data_size;
   } else {
-    is->audio_buf = af->frame->data[0];
-    resampled_data_size = data_size;
+    audio_buf = frame->data[0];
+    memcpy(audio_buf, frame->data[0], data_size);
+    return data_size;
   }
+}
+
+//Resampling
+int resample(AVCodecContext *aCodecCtx, AVFrame *af, uint8_t *audio_buf, int *audio_buf_size) {
+    int data_size = 0;
+    int resampled_data_size = 0;
+    int64_t dec_channel_layout;
+    data_size = av_samples_get_buffer_size(NULL,
+            aCodecCtx->channels,
+            af->nb_samples,
+            aCodecCtx->sample_fmt, 1);
+    dec_channel_layout =(af->channel_layout&&
+            av_frame_get_channels(af)== av_get_channel_layout_nb_channels(
+                                    af->channel_layout)) ?
+                    af->channel_layout :
+                    av_get_default_channel_layout(av_frame_get_channels(af));
+    if (af->format != audio_hw_params_src.fmt
+            || af->sample_rate != audio_hw_params_src.freq
+            || dec_channel_layout != audio_hw_params_src.channel_layout
+            || !swr_ctx)
+    {
+        swr_free(&swr_ctx);
+        swr_ctx = swr_alloc_set_opts(NULL,
+            aCodecCtx->channel_layout, (AVSampleFormat)AV_SAMPLE_FMT_S16, spec.freq,
+            dec_channel_layout,        (AVSampleFormat)af->format,     af->sample_rate,
+            0, NULL);
+
+        /* swr_ctx = swr_alloc_set_opts(NULL, audio_hw_params_tgt.channel_layout,
+         *         audio_hw_params_tgt.fmt, audio_hw_params_tgt.freq,
+         *         dec_channel_layout, (AVSampleFormat)af->format, af->sample_rate, 0, NULL); */
+        if (!swr_ctx || swr_init(swr_ctx) < 0)
+        {
+            swr_free(&swr_ctx);
+            return -1;
+        }
+        printf("swr_init\n");
+        audio_hw_params_src.channels = av_frame_get_channels(af);
+        audio_hw_params_src.fmt = (AVSampleFormat)af->format;
+        audio_hw_params_src.freq = af->sample_rate;
+    }
+
+    if (swr_ctx)
+    {
+        const uint8_t **in = (const uint8_t **) af->extended_data;
+        uint8_t **out = &audio_buf;
+        int out_count = (int64_t) af->nb_samples * audio_hw_params_tgt.freq
+                / af->sample_rate + 256;
+        int out_size = av_samples_get_buffer_size(NULL,
+                audio_hw_params_tgt.channels, out_count,
+                audio_hw_params_tgt.fmt, 0);
+        int len2;
+        if (out_size < 0)
+        {
+            av_log(NULL, AV_LOG_ERROR, "av_samples_get_buffer_size() failed\n");
+            return -1;
+        }
+        audio_buf = (uint8_t *)av_malloc(out_size);
+        /* av_fast_malloc(&audio_buf, audio_buf_size, out_size); */
+        if (!audio_buf)
+            return AVERROR(ENOMEM);
+        len2 = swr_convert(swr_ctx, out, out_count, in, af->nb_samples);
+        if (len2 < 0)
+        {
+            av_log(NULL, AV_LOG_ERROR, "swr_convert() failed\n");
+            return -1;
+        }
+        if (len2 == out_count)
+        {
+            av_log(NULL, AV_LOG_WARNING,
+                    "audio buffer is probably too small\n");
+            if (swr_init(swr_ctx) < 0)
+                swr_free(&swr_ctx);
+        }
+        resampled_data_size = len2 * audio_hw_params_tgt.channels
+                * av_get_bytes_per_sample(audio_hw_params_tgt.fmt);
+    }
+    else
+    {
+        audio_buf = af->data[0];
+        resampled_data_size = data_size;
+    }
+
+    return resampled_data_size;
 }
 
 int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_size) {
@@ -203,13 +297,19 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
 
       data_size = 0;
       if(frameFinished) {
-        data_size = av_samples_get_buffer_size(NULL,
-            aCodecCtx->channels,
-            frame->nb_samples,
-            aCodecCtx->sample_fmt,
-            1);
+        /* data_size = av_samples_get_buffer_size(NULL,
+         *     aCodecCtx->channels,
+         *     frame->nb_samples,
+         *     aCodecCtx->sample_fmt,
+         *     1);
+         * assert(data_size <= buf_size); */
+        data_size = resample(aCodecCtx, frame, audio_buf, &buf_size);
         assert(data_size <= buf_size);
-        memcpy(audio_buf, frame->data[0], data_size);
+        /* data_size = converting(aCodecCtx,frame,audio_buf);
+         * cout << "data_size : "  << data_size;
+         * if(data_size < 0)
+         *   data_size = 0; */
+        /* memcpy(audio_buf, frame->data[0], data_size); */
       }
 
       audio_pkt_data += data_size;
@@ -256,47 +356,35 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
   av_frame_free(&frame);
 }
 
-uint8_t audio_buf[(MAX_AUDIO_FRAME_SIZE * 3) / 2];
-unsigned int audio_buf_size;
-unsigned int audio_buf_index;
-
-void audio_callback(void *userdata, Uint8 *stream, int len) {
-
-  printf("audio callback called \n");
-
-  AVCodecContext *aCodecCtx = (AVCodecContext *)userdata;
-  int len1, audio_size;
-
-  audio_buf[(MAX_AUDIO_FRAME_SIZE * 3) / 2];
-  audio_buf_size = 0;
-  audio_buf_index = 0;
-
-  while(len > 0) {
-    if(audio_buf_index >= audio_buf_size) {
-      /* We have already sent all our data; get more */
-      audio_size = audio_decode_frame(aCodecCtx, audio_buf, sizeof(audio_buf));
-      if(audio_size < 0) {
-        cout << "error : " << endl;
-        /* If error, output silence */
-        audio_buf_size = 1024; // arbitrary?
-        memset(audio_buf, 0, audio_buf_size);
-      } else {
-        audio_buf_size = audio_size;
-      }
-      audio_buf_index = 0;
+static void audio_callback(void *userdata, Uint8 * stream, int len) {
+    AVCodecContext *aCodecCtx = (AVCodecContext*)userdata;
+    int len1,audio_size;
+    static uint8_t audio_buf[(MAX_AUDIO_FRAME_SIZE*3)/2];
+    static unsigned int audio_buf_size = 0;
+    static unsigned int audio_buf_index =0;
+    while(len>0){
+        if(audio_buf_index >= audio_buf_size){
+            audio_size = audio_decode_frame(aCodecCtx,audio_buf,sizeof(audio_buf));
+            if(audio_size < 0){
+                audio_buf_size = 1024;
+                memset(audio_buf,0,audio_buf_size);
+            }else{
+                audio_buf_size = audio_size;
+            }
+            audio_buf_index = 0;
+        }
+        len1 = audio_buf_size - audio_buf_index;
+        if(len1 > len)
+        len1 = len;
+        memcpy(stream, (uint8_t *)audio_buf + audio_buf_index, len1);
+        len -= len1;
+        stream += len1;
+        audio_buf_index += len1;
     }
-    len1 = audio_buf_size - audio_buf_index;
-    if(len1 > len)
-      len1 = len;
-    memcpy(stream, (uint8_t *)audio_buf + audio_buf_index, len1);
-    len -= len1;
-    stream += len1;
-    audio_buf_index += len1;
-  }
 }
 
 int main(int argc, char *argv[]) {
-  av_log_set_level(AV_LOG_DEBUG);
+  /* av_log_set_level(AV_LOG_DEBUG); */
   AVCodecContext *aCodecCtx;
 
   AVFormatContext *pFormatCtx = NULL;
@@ -499,6 +587,22 @@ int main(int argc, char *argv[]) {
   }
 
   uvPitch = pCodecCtx->width / 2;
+
+  audio_hw_params_tgt.fmt = AV_SAMPLE_FMT_S16;
+  audio_hw_params_tgt.freq = spec.freq;
+  /* audio_hw_params_tgt.channel_layout = channel_layout; */
+  audio_hw_params_tgt.channels = spec.channels;
+  audio_hw_params_tgt.frame_size = av_samples_get_buffer_size(NULL,
+      audio_hw_params_tgt.channels, 1, audio_hw_params_tgt.fmt, 1);
+  audio_hw_params_tgt.bytes_per_sec = av_samples_get_buffer_size(NULL,
+      audio_hw_params_tgt.channels, audio_hw_params_tgt.freq,
+      audio_hw_params_tgt.fmt, 1);
+  if (audio_hw_params_tgt.bytes_per_sec <= 0|| audio_hw_params_tgt.frame_size <= 0)
+  {
+    printf("size error\n");
+    return -1;
+  }
+  audio_hw_params_src = audio_hw_params_tgt;
   while (av_read_frame(pFormatCtx, &packet) >= 0) {
     // Is this a packet from the video stream?
     if (packet.stream_index == videoStream) {
