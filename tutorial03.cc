@@ -123,71 +123,8 @@ int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block) {
     return ret;
 }
 
-
-int converting(AVCodecContext *aCodecCtx, AVFrame* frame, uint8_t *audio_buf) {
-  uint8_t* audio_buf1;
-  unsigned int audio_buf1_size = 0;
-  int data_size = av_samples_get_buffer_size(NULL,
-      aCodecCtx->channels,
-      frame->nb_samples,
-      aCodecCtx->sample_fmt,
-      1);
-
-  auto dec_channel_layout =
-    (frame->channel_layout && frame->channels == av_get_channel_layout_nb_channels(frame->channel_layout)) ?
-    frame->channel_layout : av_get_default_channel_layout(frame->channels);
-
-  if (frame->format != AV_SAMPLE_FMT_S16 ||
-      dec_channel_layout != aCodecCtx->channel_layout ) {
-    swr_ctx = swr_alloc_set_opts(NULL,
-        aCodecCtx->channel_layout, (AVSampleFormat)AV_SAMPLE_FMT_S16, spec.freq,
-        dec_channel_layout,        (AVSampleFormat)frame->format,     frame->sample_rate,
-        0, NULL);
-
-    if (!swr_ctx || swr_init(swr_ctx) < 0) {
-      swr_free(&swr_ctx);
-      return -1;
-    }
-  }
-
-  int resampled_data_size;
-  if (swr_ctx) {
-    const uint8_t **in = (const uint8_t **)frame->extended_data;
-    int out_count =  + 256;
-    int out_size  = av_samples_get_buffer_size(NULL, spec.channels, out_count, AV_SAMPLE_FMT_S16, 0);
-    int len2;
-    if (out_size < 0) {
-      av_log(NULL, AV_LOG_ERROR, "av_samples_get_buffer_size() failed\n");
-         return -1;
-    }
-
-    audio_buf1 = (uint8_t*) av_malloc(out_size);
-    /* av_malloc(&audio_buf1, &audio_buf1_size, out_size); */
-    if (!audio_buf1)
-      return AVERROR(ENOMEM);
-
-    len2 = swr_convert(swr_ctx, &audio_buf1, out_count, in, frame->nb_samples);
-    if (len2 < 0) {
-      av_log(NULL, AV_LOG_ERROR, "swr_convert() failed\n");
-      return -1;
-    }
-    if (len2 == out_count) { av_log(NULL, AV_LOG_WARNING, "audio buffer is probably too small\n");
-      if (swr_init(swr_ctx) < 0)
-        swr_free(&swr_ctx);
-    }
-
-    resampled_data_size = len2 * spec.channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-    memcpy(audio_buf, audio_buf1, resampled_data_size);
-    return resampled_data_size;
-  } else {
-    audio_buf = frame->data[0];
-    memcpy(audio_buf, frame->data[0], data_size);
-    return data_size;
-  }
-}
-
 //Resampling
-int resample(AVCodecContext *aCodecCtx, AVFrame *af, uint8_t *audio_buf, int *audio_buf_size) {
+int resample(AVCodecContext *aCodecCtx, AVFrame *af, uint8_t** audio_buf, int *audio_buf_size) {
     int data_size = 0;
     int resampled_data_size = 0;
     int64_t dec_channel_layout;
@@ -202,9 +139,8 @@ int resample(AVCodecContext *aCodecCtx, AVFrame *af, uint8_t *audio_buf, int *au
                     av_get_default_channel_layout(av_frame_get_channels(af));
     if (af->format != audio_hw_params_src.fmt
             || af->sample_rate != audio_hw_params_src.freq
-            || dec_channel_layout != audio_hw_params_src.channel_layout
-            || !swr_ctx)
-    {
+            /* || dec_channel_layout != audio_hw_params_src.channel_layout */
+            || !swr_ctx) {
         swr_free(&swr_ctx);
         swr_ctx = swr_alloc_set_opts(NULL,
             aCodecCtx->channel_layout, (AVSampleFormat)AV_SAMPLE_FMT_S16, spec.freq,
@@ -225,10 +161,9 @@ int resample(AVCodecContext *aCodecCtx, AVFrame *af, uint8_t *audio_buf, int *au
         audio_hw_params_src.freq = af->sample_rate;
     }
 
-    if (swr_ctx)
-    {
+    if (swr_ctx) {
         const uint8_t **in = (const uint8_t **) af->extended_data;
-        uint8_t **out = &audio_buf;
+        uint8_t **out = audio_buf;
         int out_count = (int64_t) af->nb_samples * audio_hw_params_tgt.freq
                 / af->sample_rate + 256;
         int out_size = av_samples_get_buffer_size(NULL,
@@ -240,9 +175,9 @@ int resample(AVCodecContext *aCodecCtx, AVFrame *af, uint8_t *audio_buf, int *au
             av_log(NULL, AV_LOG_ERROR, "av_samples_get_buffer_size() failed\n");
             return -1;
         }
-        audio_buf = (uint8_t *)av_malloc(out_size);
+        *audio_buf = (uint8_t *)av_malloc(out_size);
         /* av_fast_malloc(&audio_buf, audio_buf_size, out_size); */
-        if (!audio_buf)
+        if (!*audio_buf)
             return AVERROR(ENOMEM);
         len2 = swr_convert(swr_ctx, out, out_count, in, af->nb_samples);
         if (len2 < 0)
@@ -259,13 +194,10 @@ int resample(AVCodecContext *aCodecCtx, AVFrame *af, uint8_t *audio_buf, int *au
         }
         resampled_data_size = len2 * audio_hw_params_tgt.channels
                 * av_get_bytes_per_sample(audio_hw_params_tgt.fmt);
-    }
-    else
-    {
-        audio_buf = af->data[0];
+    } else {
+        *audio_buf = af->data[0];
         resampled_data_size = data_size;
     }
-
     return resampled_data_size;
 }
 
@@ -303,7 +235,8 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
          *     aCodecCtx->sample_fmt,
          *     1);
          * assert(data_size <= buf_size); */
-        data_size = resample(aCodecCtx, frame, audio_buf, &buf_size);
+        data_size = resample(aCodecCtx, frame, &audio_buf, &buf_size);
+        cout << "data size : " << data_size << endl;
         assert(data_size <= buf_size);
         /* data_size = converting(aCodecCtx,frame,audio_buf);
          * cout << "data_size : "  << data_size;
@@ -338,20 +271,6 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
 
     audio_pkt_data = pkt->data;
     audio_pkt_size = pkt->size;
-
-    /* len1 = avcodec_send_packet(aCodecCtx, pkt);
-     * bool frameFinished = 0;
-     * if (!(len1 < 0 && len1 != AVERROR(EAGAIN) && len1 != AVERROR_EOF)) {
-     *   if (len1 >= 0)
-     *     pkt->size = 0;
-     *   cout << "receive packet !! " << endl;
-     *   len1 = avcodec_receive_frame(aCodecCtx, frame);
-     *   if (len1 >= 0) {
-     *     cout << "len1 : " <<len1 << endl;
-     *     frameFinished = 1;
-     *     cout << "got frame !!" << endl;
-     *   }
-     * } */
   }
   av_frame_free(&frame);
 }
@@ -362,25 +281,48 @@ static void audio_callback(void *userdata, Uint8 * stream, int len) {
     static uint8_t audio_buf[(MAX_AUDIO_FRAME_SIZE*3)/2];
     static unsigned int audio_buf_size = 0;
     static unsigned int audio_buf_index =0;
-    while(len>0){
-        if(audio_buf_index >= audio_buf_size){
-            audio_size = audio_decode_frame(aCodecCtx,audio_buf,sizeof(audio_buf));
-            if(audio_size < 0){
-                audio_buf_size = 1024;
-                memset(audio_buf,0,audio_buf_size);
-            }else{
-                audio_buf_size = audio_size;
-            }
-            audio_buf_index = 0;
+    while (len > 0) {
+      if (audio_buf_index >= audio_buf_size) {
+        audio_size = audio_decode_frame(aCodecCtx, audio_buf, sizeof(audio_buf));
+        if (audio_size < 0) {
+          cout << "audio size is minux" << endl;
+          /* if error, just output silence */
+          audio_buf_size = 1024;
+          /* audio_buf = NULL;
+           * audio_buf_size = SDL_AUDIO_MIN_BUFFER_SIZE / is->audio_tgt.frame_size * is->audio_tgt.frame_size; */
+        } else {
+          audio_buf_size = audio_size;
         }
-        len1 = audio_buf_size - audio_buf_index;
-        if(len1 > len)
+        audio_buf_index = 0;
+      }
+      len1 = audio_buf_size - audio_buf_index;
+      if (len1 > len)
         len1 = len;
-        memcpy(stream, (uint8_t *)audio_buf + audio_buf_index, len1);
-        len -= len1;
-        stream += len1;
-        audio_buf_index += len1;
+      memset(stream, 0, len1);
+      SDL_MixAudioFormat(stream, (uint8_t *)audio_buf + audio_buf_index, AUDIO_S16SYS, len1, 64);
+      len -= len1;
+      stream += len1;
+      audio_buf_index += len1;
     }
+    /* while(len>0){
+     *     if(audio_buf_index >= audio_buf_size){
+     *         audio_size = audio_decode_frame(aCodecCtx,audio_buf,sizeof(audio_buf));
+     *         if(audio_size < 0){
+     *             audio_buf_size = 1024;
+     *             memset(audio_buf,0,audio_buf_size);
+     *         }else{
+     *             audio_buf_size = audio_size;
+     *         }
+     *         audio_buf_index = 0;
+     *     }
+     *     len1 = audio_buf_size - audio_buf_index;
+     *     if(len1 > len)
+     *     len1 = len;
+     *     memcpy(stream, (uint8_t *)audio_buf + audio_buf_index, len1);
+     *     len -= len1;
+     *     stream += len1;
+     *     audio_buf_index += len1;
+     * } */
 }
 
 int main(int argc, char *argv[]) {
