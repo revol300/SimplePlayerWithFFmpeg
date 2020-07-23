@@ -226,23 +226,23 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
         }
       }
 
-
       data_size = 0;
       if(frameFinished) {
+        uint8_t* temp_buf;
         /* data_size = av_samples_get_buffer_size(NULL,
          *     aCodecCtx->channels,
          *     frame->nb_samples,
          *     aCodecCtx->sample_fmt,
          *     1);
          * assert(data_size <= buf_size); */
-        data_size = resample(aCodecCtx, frame, &audio_buf, &buf_size);
+        data_size = resample(aCodecCtx, frame, &temp_buf, &buf_size);
         cout << "data size : " << data_size << endl;
         assert(data_size <= buf_size);
         /* data_size = converting(aCodecCtx,frame,audio_buf);
          * cout << "data_size : "  << data_size;
          * if(data_size < 0)
          *   data_size = 0; */
-        /* memcpy(audio_buf, frame->data[0], data_size); */
+        memcpy(audio_buf, temp_buf, data_size);
       }
 
       audio_pkt_data += data_size;
