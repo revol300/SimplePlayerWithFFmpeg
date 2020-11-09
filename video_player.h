@@ -5,6 +5,7 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
+#include <libswresample/swresample.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_thread.h>
 }
@@ -38,9 +39,13 @@ private:
   SDL_Window *screen;
   SDL_Renderer *renderer;
   SDL_Texture *texture;
+  SDL_AudioSpec audio_wanted_spec_;
   Uint8 *yPlane, *uPlane, *vPlane;
   size_t yPlaneSz, uvPlaneSz;
   int uvPitch;
+
+  //NOTE : 임시로 입력
+  int dev;
 
 };
 #endif //VIDEO_PLAYER_H_

@@ -7,8 +7,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 #FFMPEG
-set(FFMPEG_INCLUDE_DIR "/usr/local/Cellar/ffmpeg/4.3_1/include")
-set(FFMPEG_LIB_DIR "/usr/local/Cellar/ffmpeg/4.3_1/lib")
+# NOTE : On MacOS, brew install ffmpeg does not install pc file
+# Therefore, write path to ffmpeg library manually
+set(FFMPEG_INCLUDE_DIR "/usr/local/Cellar/ffmpeg/4.3.1_3/include")
+set(FFMPEG_LIB_DIR "/usr/local/Cellar/ffmpeg/4.3.1_3/lib")
 set(AVCODEC_LIBRARY "${FFMPEG_LIB_DIR}/libavcodec.dylib")
 set(AVFORMAT_LIBRARY "${FFMPEG_LIB_DIR}/libavformat.dylib")
 set(AVUTIL_LIBRARY "${FFMPEG_LIB_DIR}/libavutil.dylib")
