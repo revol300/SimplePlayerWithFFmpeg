@@ -198,7 +198,9 @@ VideoPlayer::VideoPlayer() : fmt_ctx_(NULL),
                              vPlane(nullptr),
                              yPlaneSz(0),
                              uvPlaneSz(0),
-                             uvPitch(0) {}
+                             uvPitch(0) {
+                               av_register_all(); //@NOTE: For FFmpeg version < 4.0
+                             }
 
 VideoPlayer::~VideoPlayer() {
   if(yPlane)
@@ -219,13 +221,16 @@ void VideoPlayer::setURL(string const& filename) {
 
 int VideoPlayer::openFile() {
   //this function only looks at the header
-  if(avformat_open_input(&fmt_ctx_, file_path_.c_str(), NULL, NULL) < 0) {
-    cout << "Could not open input file " <<   file_path_ << endl;
+  int ret = avformat_open_input(&fmt_ctx_, file_path_.c_str(), NULL, NULL);
+  if(ret < 0) {
+    char error_msg[256];
+    av_make_error_string(error_msg, 256, ret);
+    cout << "Could not open input file " <<   file_path_ << " error_msg : "<< error_msg << endl;
     return -1;
   }
-
-  if(avformat_find_stream_info(fmt_ctx_, NULL) < 0) {
-    cout << "Failed to retrieve input stream information" << endl;
+  ret = avformat_find_stream_info(fmt_ctx_, NULL);
+  if(ret < 0) {
+    cout << "Failed to retrieve input stream information : " << endl;
     return -2;
   }
 
