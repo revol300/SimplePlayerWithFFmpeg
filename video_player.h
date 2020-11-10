@@ -8,6 +8,7 @@ extern "C" {
 #include <libswresample/swresample.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_thread.h>
+#include <cassert>
 }
 
 #include <iostream>
