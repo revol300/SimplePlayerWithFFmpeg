@@ -5,6 +5,6 @@ extern "C"{
 #include <libswresample/swresample.h>
 #include <libavutil/mem.h>
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_thread.h>
+#include <SDL.h>
+#include <SDL_thread.h>
 }

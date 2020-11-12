@@ -525,19 +525,9 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
       data_size = 0;
       if(frameFinished) {
         uint8_t* temp_buf;
-        /* data_size = av_samples_get_buffer_size(NULL,
-         *     aCodecCtx->channels,
-         *     frame->nb_samples,
-         *     aCodecCtx->sample_fmt,
-         *     1);
-         * assert(data_size <= buf_size); */
         data_size = resample(aCodecCtx, frame, &temp_buf, &buf_size);
         cout << "data size : " << data_size << endl;
         assert(data_size <= buf_size);
-        /* data_size = converting(aCodecCtx,frame,audio_buf);
-         * cout << "data_size : "  << data_size;
-         * if(data_size < 0)
-         *   data_size = 0; */
         memcpy(audio_buf, temp_buf, data_size);
       }
 
@@ -601,25 +591,6 @@ static void audio_callback(void *userdata, Uint8 * stream, int len) {
       stream += len1;
       audio_buf_index += len1;
     }
-    /* while(len>0){
-     *     if(audio_buf_index >= audio_buf_size){
-     *         audio_size = audio_decode_frame(aCodecCtx,audio_buf,sizeof(audio_buf));
-     *         if(audio_size < 0){
-     *             audio_buf_size = 1024;
-     *             memset(audio_buf,0,audio_buf_size);
-     *         }else{
-     *             audio_buf_size = audio_size;
-     *         }
-     *         audio_buf_index = 0;
-     *     }
-     *     len1 = audio_buf_size - audio_buf_index;
-     *     if(len1 > len)
-     *     len1 = len;
-     *     memcpy(stream, (uint8_t *)audio_buf + audio_buf_index, len1);
-     *     len -= len1;
-     *     stream += len1;
-     *     audio_buf_index += len1;
-     * } */
 }
 
 

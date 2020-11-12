@@ -54,7 +54,11 @@ ENDIF()
 include_directories(${FFMPEG_INCLUDE_DIR})
 
 find_package(SDL2 REQUIRED)
-include_directories(${SDL2_INCLUDE_DIR})
+IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  include_directories(${SDL2_INCLUDE_DIRS})
+ELSE()
+  include_directories(${SDL2_INCLUDE_DIR})
+ENDIF()
 
 add_executable(screencapture screen_capture.cc)
 add_executable(tutorial02 tutorial02.cc)
