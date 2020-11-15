@@ -41,8 +41,7 @@ void packet_queue_init(PacketQueue *q) {
   q->cond = SDL_CreateCond();
 }
 
-int packet_queue_put_private(PacketQueue *q, AVPacket *pkt)
-{
+int packet_queue_put_private(PacketQueue *q, AVPacket *pkt) {
     AVPacketList *pkt1;
 
     pkt1 = (AVPacketList*)av_malloc(sizeof(AVPacketList));
@@ -66,8 +65,7 @@ int packet_queue_put_private(PacketQueue *q, AVPacket *pkt)
 int packet_queue_put(PacketQueue *q, AVPacket *pkt)
 {
     int ret;
-
-    SDL_LockMutex(q->mutex);
+SDL_LockMutex(q->mutex);
     ret = packet_queue_put_private(q, pkt);
     SDL_UnlockMutex(q->mutex);
     return ret;
@@ -101,6 +99,104 @@ int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block) {
     }
     SDL_UnlockMutex(q->mutex);
     return ret;
+}
+
+double get_audio_clock(VideoState *is) {
+  double pts;
+  int hw_buf_size, bytes_per_sec, n;
+
+  pts = is->audio_clock; /* maintained in the audio thread */
+  hw_buf_size = is->audio_buf_size - is->audio_buf_index;
+  bytes_per_sec = 0;
+  n = is->audio_ctx->channels * 2;
+  if(is->audio_st) {
+    bytes_per_sec = is->audio_ctx->sample_rate * n;
+  }
+  if(bytes_per_sec) {
+    pts -= (double)hw_buf_size / bytes_per_sec;
+  }
+  return pts;
+}
+
+double get_video_clock(VideoState *is) {
+  double delta;
+
+  delta = (av_gettime() - is->video_current_pts_time) / 1000000.0;
+  return is->video_current_pts + delta;
+}
+double get_external_clock(VideoState *is) {
+  return av_gettime() / 1000000.0;
+}
+
+double get_master_clock(VideoState *is) {
+  if(is->av_sync_type == AV_SYNC_VIDEO_MASTER) {
+    return get_video_clock(is);
+  } else if(is->av_sync_type == AV_SYNC_AUDIO_MASTER) {
+    return get_audio_clock(is);
+  } else {
+    return get_external_clock(is);
+  }
+}
+
+/* Add or subtract samples to get a better sync, return new
+   audio buffer size */
+int synchronize_audio(VideoState *is, short *samples, int samples_size, double pts) {
+  int n;
+  double ref_clock;
+
+  n = 2 * is->audio_ctx->channels;
+
+  if(is->av_sync_type != AV_SYNC_AUDIO_MASTER) {
+    double diff, avg_diff;
+    int wanted_size, min_size, max_size /*, nb_samples */;
+
+    ref_clock = get_master_clock(is);
+    diff = get_audio_clock(is) - ref_clock;
+
+    if(diff < AV_NOSYNC_THRESHOLD) {
+      // accumulate the diffs
+      is->audio_diff_cum = diff + is->audio_diff_avg_coef
+        * is->audio_diff_cum;
+      if(is->audio_diff_avg_count < AUDIO_DIFF_AVG_NB) {
+        is->audio_diff_avg_count++;
+      } else {
+        avg_diff = is->audio_diff_cum * (1.0 - is->audio_diff_avg_coef);
+        if(fabs(avg_diff) >= is->audio_diff_threshold) {
+          wanted_size = samples_size + ((int)(diff * is->audio_ctx->sample_rate) * n);
+          min_size = samples_size * ((100 - SAMPLE_CORRECTION_PERCENT_MAX) / 100);
+          max_size = samples_size * ((100 + SAMPLE_CORRECTION_PERCENT_MAX) / 100);
+          if(wanted_size < min_size) {
+            wanted_size = min_size;
+          } else if (wanted_size > max_size) {
+            wanted_size = max_size;
+          }
+          if(wanted_size < samples_size) {
+            /* remove samples */
+            samples_size = wanted_size;
+          } else if(wanted_size > samples_size) {
+            uint8_t *samples_end, *q;
+            int nb;
+
+            /* add samples by copying final sample*/
+            nb = (samples_size - wanted_size);
+            samples_end = (uint8_t *)samples + samples_size - n;
+            q = samples_end + n;
+            while(nb > 0) {
+              memcpy(q, samples_end, n);
+              q += n;
+              nb -= n;
+            }
+            samples_size = wanted_size;
+          }
+        }
+      }
+    } else {
+      /* difference is TOO big; reset diff stuff */
+      is->audio_diff_avg_count = 0;
+      is->audio_diff_cum = 0;
+    }
+  }
+  return samples_size;
 }
 
 //Resampling
@@ -575,9 +671,10 @@ static void audio_callback(void *userdata, Uint8 * stream, int len) {
           cout << "audio size is minux" << endl;
           /* if error, just output silence */
           audio_buf_size = 1024;
-          /* audio_buf = NULL;
-           * audio_buf_size = SDL_AUDIO_MIN_BUFFER_SIZE / is->audio_tgt.frame_size * is->audio_tgt.frame_size; */
         } else {
+          //@NOTE: sync를 맞추기 위해 사용 우선 기준이 되는 clock을 audio로 사용
+          /* audio_size = synchronize_audio(is, (int16_t *)is->audio_buf,
+           *     audio_size, pts); */
           audio_buf_size = audio_size;
         }
         audio_buf_index = 0;
