@@ -32,6 +32,10 @@ private:
   string file_path_;
   int video_index_, audio_index_;
   AVFormatContext* fmt_ctx_;
+  /* double getAudioClock();
+   * double getVideoClock();
+   * double getMasterClock();
+   * double getExternalClock(); */
 
   AVCodec* video_codec_;
   AVCodec* audio_codec_;
@@ -49,6 +53,11 @@ private:
 
   //NOTE : 임시로 입력
   int dev;
+
+  /* //NOTE : sync관련 변수 나중에 변경 필요
+   * double audio_clock_;
+   * int audio_buf_size_;
+   * int audio_buf_index_; */
 
 };
 #endif //VIDEO_PLAYER_H_

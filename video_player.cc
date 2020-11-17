@@ -101,103 +101,68 @@ int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block) {
     return ret;
 }
 
-double get_audio_clock(VideoState *is) {
-  double pts;
-  int hw_buf_size, bytes_per_sec, n;
 
-  pts = is->audio_clock; /* maintained in the audio thread */
-  hw_buf_size = is->audio_buf_size - is->audio_buf_index;
-  bytes_per_sec = 0;
-  n = is->audio_ctx->channels * 2;
-  if(is->audio_st) {
-    bytes_per_sec = is->audio_ctx->sample_rate * n;
-  }
-  if(bytes_per_sec) {
-    pts -= (double)hw_buf_size / bytes_per_sec;
-  }
-  return pts;
-}
-
-double get_video_clock(VideoState *is) {
-  double delta;
-
-  delta = (av_gettime() - is->video_current_pts_time) / 1000000.0;
-  return is->video_current_pts + delta;
-}
-double get_external_clock(VideoState *is) {
-  return av_gettime() / 1000000.0;
-}
-
-double get_master_clock(VideoState *is) {
-  if(is->av_sync_type == AV_SYNC_VIDEO_MASTER) {
-    return get_video_clock(is);
-  } else if(is->av_sync_type == AV_SYNC_AUDIO_MASTER) {
-    return get_audio_clock(is);
-  } else {
-    return get_external_clock(is);
-  }
-}
 
 /* Add or subtract samples to get a better sync, return new
    audio buffer size */
-int synchronize_audio(VideoState *is, short *samples, int samples_size, double pts) {
-  int n;
-  double ref_clock;
-
-  n = 2 * is->audio_ctx->channels;
-
-  if(is->av_sync_type != AV_SYNC_AUDIO_MASTER) {
-    double diff, avg_diff;
-    int wanted_size, min_size, max_size /*, nb_samples */;
-
-    ref_clock = get_master_clock(is);
-    diff = get_audio_clock(is) - ref_clock;
-
-    if(diff < AV_NOSYNC_THRESHOLD) {
-      // accumulate the diffs
-      is->audio_diff_cum = diff + is->audio_diff_avg_coef
-        * is->audio_diff_cum;
-      if(is->audio_diff_avg_count < AUDIO_DIFF_AVG_NB) {
-        is->audio_diff_avg_count++;
-      } else {
-        avg_diff = is->audio_diff_cum * (1.0 - is->audio_diff_avg_coef);
-        if(fabs(avg_diff) >= is->audio_diff_threshold) {
-          wanted_size = samples_size + ((int)(diff * is->audio_ctx->sample_rate) * n);
-          min_size = samples_size * ((100 - SAMPLE_CORRECTION_PERCENT_MAX) / 100);
-          max_size = samples_size * ((100 + SAMPLE_CORRECTION_PERCENT_MAX) / 100);
-          if(wanted_size < min_size) {
-            wanted_size = min_size;
-          } else if (wanted_size > max_size) {
-            wanted_size = max_size;
-          }
-          if(wanted_size < samples_size) {
-            /* remove samples */
-            samples_size = wanted_size;
-          } else if(wanted_size > samples_size) {
-            uint8_t *samples_end, *q;
-            int nb;
-
-            /* add samples by copying final sample*/
-            nb = (samples_size - wanted_size);
-            samples_end = (uint8_t *)samples + samples_size - n;
-            q = samples_end + n;
-            while(nb > 0) {
-              memcpy(q, samples_end, n);
-              q += n;
-              nb -= n;
-            }
-            samples_size = wanted_size;
-          }
-        }
-      }
-    } else {
-      /* difference is TOO big; reset diff stuff */
-      is->audio_diff_avg_count = 0;
-      is->audio_diff_cum = 0;
-    }
-  }
-  return samples_size;
-}
+/* int synchronize_audio(VideoState *is, short *samples, int samples_size, double pts) {
+ *   int n;
+ *   double ref_clock;
+ *
+ *   n = 2 * is->audio_ctx->channels;
+ *
+ *   if(is->av_sync_type != AV_SYNC_AUDIO_MASTER) {
+ *     double diff, avg_diff;
+ *     int wanted_size, min_size, max_size [>, nb_samples <];
+ *
+ *     ref_clock = get_master_clock(is);
+ *     diff = get_audio_clock(is) - ref_clock;
+ *
+ *     if(diff < AV_NOSYNC_THRESHOLD) {
+ *       // accumulate the diffs
+ *       is->audio_diff_cum = diff + is->audio_diff_avg_coef
+ *         * is->audio_diff_cum;
+ *       if(is->audio_diff_avg_count < AUDIO_DIFF_AVG_NB) {
+ *         is->audio_diff_avg_count++;
+ *       } else {
+ *         avg_diff = is->audio_diff_cum * (1.0 - is->audio_diff_avg_coef);
+ *         if(fabs(avg_diff) >= is->audio_diff_threshold) {
+ *           wanted_size = samples_size + ((int)(diff * is->audio_ctx->sample_rate) * n);
+ *           min_size = samples_size * ((100 - SAMPLE_CORRECTION_PERCENT_MAX) / 100);
+ *           max_size = samples_size * ((100 + SAMPLE_CORRECTION_PERCENT_MAX) / 100);
+ *           if(wanted_size < min_size) {
+ *             wanted_size = min_size;
+ *           } else if (wanted_size > max_size) {
+ *             wanted_size = max_size;
+ *           }
+ *           if(wanted_size < samples_size) {
+ *             [> remove samples <]
+ *             samples_size = wanted_size;
+ *           } else if(wanted_size > samples_size) {
+ *             uint8_t *samples_end, *q;
+ *             int nb;
+ *
+ *             [> add samples by copying final sample<]
+ *             nb = (samples_size - wanted_size);
+ *             samples_end = (uint8_t *)samples + samples_size - n;
+ *             q = samples_end + n;
+ *             while(nb > 0) {
+ *               memcpy(q, samples_end, n);
+ *               q += n;
+ *               nb -= n;
+ *             }
+ *             samples_size = wanted_size;
+ *           }
+ *         }
+ *       }
+ *     } else {
+ *       [> difference is TOO big; reset diff stuff <]
+ *       is->audio_diff_avg_count = 0;
+ *       is->audio_diff_cum = 0;
+ *     }
+ *   }
+ *   return samples_size;
+ * } */
 
 //Resampling
 int resample(AVCodecContext *aCodecCtx, AVFrame *af, uint8_t** audio_buf, int *audio_buf_size) {
@@ -223,9 +188,6 @@ int resample(AVCodecContext *aCodecCtx, AVFrame *af, uint8_t** audio_buf, int *a
             dec_channel_layout,        (AVSampleFormat)af->format,     af->sample_rate,
             0, NULL);
 
-        /* swr_ctx = swr_alloc_set_opts(NULL, audio_hw_params_tgt.channel_layout,
-         *         audio_hw_params_tgt.fmt, audio_hw_params_tgt.freq,
-         *         dec_channel_layout, (AVSampleFormat)af->format, af->sample_rate, 0, NULL); */
         if (!swr_ctx || swr_init(swr_ctx) < 0)
         {
             swr_free(&swr_ctx);
@@ -689,6 +651,46 @@ static void audio_callback(void *userdata, Uint8 * stream, int len) {
       audio_buf_index += len1;
     }
 }
+
+/* double VideoPlayer::getAudioClock() {
+ *   double pts;
+ *   int hw_buf_size, bytes_per_sec, n;
+ *
+ *   pts = audio_clock_; [> maintained in the audio thread <]
+ *   hw_buf_size = audio_buf_size_ - audio_buf_index_;
+ *   bytes_per_sec = 0;
+ *   n = audio_codec_context_->channels * 2;
+ *
+ *   // audio stream이 있으면
+ *   if(audio_codec_) {
+ *     bytes_per_sec = is->audio_ctx->sample_rate * n;
+ *   }
+ *   if(bytes_per_sec) {
+ *     pts -= (double)hw_buf_size / bytes_per_sec;
+ *   }
+ *   return pts;
+ * }
+ *
+ * double VideoPlayer::getVideoClock() {
+ *   double delta;
+ *
+ *   delta = (av_gettime() - is->video_current_pts_time) / 1000000.0;
+ *   return is->video_current_pts + delta;
+ * }
+ *
+ * double VideoPlayer::getExternalClock() {
+ *   return av_gettime() / 1000000.0;
+ * }
+ *
+ * double VideoPlayer::getMasterClock() {
+ *   if(is->av_sync_type == AV_SYNC_VIDEO_MASTER) {
+ *     return getVideoClock();
+ *   } else if(is->av_sync_type == AV_SYNC_AUDIO_MASTER) {
+ *     return getAudioClock();
+ *   } else {
+ *     return getExternalClock();
+ *   }
+ * } */
 
 
 int main(int argc, char* argv[]) {
