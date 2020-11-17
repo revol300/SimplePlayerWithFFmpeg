@@ -19,45 +19,22 @@ using namespace std;
 
 class VideoPlayer {
 public:
-  VideoPlayer();
-  ~VideoPlayer();
-
-  void setURL(string const& filename);
-  int init();
-  void play();
-
+  VideoPlayer(int video_index, AVCodec* video_codec, AVCodecContext* video_codec_context);
+  int initRenderer();
+  int getVideoIndex() const {return video_index_;};
+  void render(AVPacket& packet);
 private:
-  int openFile();
-  int openWindow();
-  string file_path_;
-  int video_index_, audio_index_;
-  AVFormatContext* fmt_ctx_;
-  /* double getAudioClock();
-   * double getVideoClock();
-   * double getMasterClock();
-   * double getExternalClock(); */
-
+  int video_index_;
   AVCodec* video_codec_;
-  AVCodec* audio_codec_;
   AVCodecContext* video_codec_context_;
-  AVCodecContext* audio_codec_context_;
-  struct SwsContext *sws_ctx;
-  SDL_Event event;
-  SDL_Window *screen;
-  SDL_Renderer *renderer;
-  SDL_Texture *texture;
-  SDL_AudioSpec audio_wanted_spec_;
+  SDL_Texture *texture_;
+  struct SwsContext *sws_ctx_;
   Uint8 *yPlane, *uPlane, *vPlane;
   size_t yPlaneSz, uvPlaneSz;
   int uvPitch;
-
-  //NOTE : 임시로 입력
-  int dev;
-
-  /* //NOTE : sync관련 변수 나중에 변경 필요
-   * double audio_clock_;
-   * int audio_buf_size_;
-   * int audio_buf_index_; */
-
+  AVFrame *pFrame;
+  AVFrame* pFrameYUV;
+  SDL_Renderer *renderer_;
+  SDL_Window *screen_;
 };
 #endif //VIDEO_PLAYER_H_
