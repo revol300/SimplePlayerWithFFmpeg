@@ -90,15 +90,25 @@ int VideoPlayer::initRenderer() {
   return 0;
 }
 
+void VideoPlayer::quit() {
+  SDL_DestroyTexture(texture_);
+  SDL_DestroyRenderer(renderer_);
+  SDL_DestroyWindow(screen_);
+}
 
-void VideoPlayer::render(AVPacket& packet) {
+void VideoPlayer::render() {
+  std::lock_guard<std::mutex> lock_guard(queue_lock_);
+  if(packet_queue_.size() <=0)
+    return;
+  AVPacket* packet = packet_queue_.front();
+
   cout << "render video!!" << endl;
   bool frameFinished = false;
   // Decode video frame
-  auto used = avcodec_send_packet(video_codec_context_, &packet);
+  auto used = avcodec_send_packet(video_codec_context_, packet);
   if (!(used < 0 && used != AVERROR(EAGAIN) && used != AVERROR_EOF)) {
     if (used >= 0)
-      packet.size = 0;
+      packet->size = 0;
     used = avcodec_receive_frame(video_codec_context_, pFrame);
     if (used >= 0)
       frameFinished = true;
@@ -124,4 +134,16 @@ void VideoPlayer::render(AVPacket& packet) {
     SDL_RenderCopy(renderer_, texture_, NULL, NULL);
     SDL_RenderPresent(renderer_);
   }
+  av_packet_unref(packet);
+  packet_queue_.pop();
+  free(packet);
+}
+
+void VideoPlayer::addPacket(AVPacket& packet) {
+   std::lock_guard<std::mutex> lock_guard(queue_lock_);
+   AVPacket *copy = (AVPacket*)malloc(sizeof(struct AVPacket));
+   av_init_packet(copy);
+   if (av_packet_ref(copy, &packet) < 0)
+     exit(-1);
+   packet_queue_.push(copy);
 }

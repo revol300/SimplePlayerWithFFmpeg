@@ -15,6 +15,7 @@ extern "C" {
 
 #include <iostream>
 #include <memory>
+#include <queue>
 using namespace std;
 
 class VideoPlayer {
@@ -22,7 +23,9 @@ public:
   VideoPlayer(int video_index, AVCodec* video_codec, AVCodecContext* video_codec_context);
   int initRenderer();
   int getVideoIndex() const {return video_index_;};
-  void render(AVPacket& packet);
+  void addPacket(AVPacket& packet);
+  void render();
+  void quit();
 private:
   int video_index_;
   AVCodec* video_codec_;
@@ -36,5 +39,7 @@ private:
   AVFrame* pFrameYUV;
   SDL_Renderer *renderer_;
   SDL_Window *screen_;
+  queue<AVPacket*> packet_queue_;
+  mutex queue_lock_;
 };
 #endif //VIDEO_PLAYER_H_

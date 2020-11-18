@@ -1,4 +1,7 @@
 #include "multimedia_player.h"
+#include <unistd.h>
+
+#define VIDEO_RENDER_EVENT (SDL_USEREVENT)
 
 MultimediaPlayer::MultimediaPlayer() : video_player_(nullptr), fmt_ctx_(NULL) {}
 
@@ -99,33 +102,44 @@ int MultimediaPlayer::openWindow() {
   return 0;
 }
 
+static Uint32 videoRenderCallback(Uint32 interval, void *opaque) {
+  SDL_Event event;
+  event.type = VIDEO_RENDER_EVENT;
+  SDL_PushEvent(&event);
+  return 0; /* 0 means stop timer */
+}
+
 int MultimediaPlayer::play() {
   AVPacket packet;
-  while (av_read_frame(fmt_ctx_, &packet) >= 0) {
-    // Is this a packet from the video stream?
-    if (packet.stream_index == video_player_->getVideoIndex()) {
-      cout << "video packet!!!" << endl;
-      //@NOTE: video_player에 queue를 만들어서 packet이 추가되도록 수정 필요
-      video_player_->render(packet);
-    } else if (packet.stream_index == audio_index_) {
-      cout << "audio packet!!!" << endl;
+  /* SDL_CreateThread(renderVideo, "render video" ,video_player_); */
+  SDL_AddTimer(1, videoRenderCallback, NULL);
+  while (true) {
+    if (av_read_frame(fmt_ctx_, &packet) >= 0) {
+      // Is this a packet from the video stream?
+      if (packet.stream_index == video_player_->getVideoIndex()) {
+        //@NOTE: video_player에 queue를 만들어서 packet이 추가되도록 수정 필요
+        video_player_->addPacket(packet);
+        /* video_player_->render(); */
+      } else if (packet.stream_index == audio_index_) {
+        cout << "audio packet!!!" << endl;
+      }
     }
     av_packet_unref(&packet);
     //PollEvent를 해야 화면이 뜸:
     SDL_PollEvent(&event);
     switch (event.type) {
       case SDL_QUIT:
-        /* video_player_->quit();
-         * SDL_DestroyTexture(texture);
-         * SDL_DestroyRenderer(renderer);
-         * SDL_DestroyWindow(screen);
-         * SDL_Quit(); */
+        video_player_->quit();
+        SDL_Quit();
         exit(0);
+        return 0;
+      case VIDEO_RENDER_EVENT:
+        video_player_->render();
+        SDL_AddTimer(1, videoRenderCallback, NULL);
         break;
       default:
         break;
     }
-
   }
   return 0;
 }

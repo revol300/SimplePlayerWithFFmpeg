@@ -314,31 +314,31 @@ int audio_decode_frame(VideoState *is, uint8_t *audio_buf, int buf_size, double 
       int got_frame = 0;
       len1 = avcodec_decode_audio4(is->audio_ctx, &is->audio_frame, &got_frame, pkt);
       if(len1 < 0) {
-	/* if error, skip frame */
-	is->audio_pkt_size = 0;
-	break;
+        /* if error, skip frame */
+        is->audio_pkt_size = 0;
+        break;
       }
       data_size = 0;
       if(got_frame) {
-	data_size = av_samples_get_buffer_size(NULL, 
-					       is->audio_ctx->channels,
-					       is->audio_frame.nb_samples,
-					       is->audio_ctx->sample_fmt,
-					       1);
-	assert(data_size <= buf_size);
-	memcpy(audio_buf, is->audio_frame.data[0], data_size);
+        data_size = av_samples_get_buffer_size(NULL, 
+            is->audio_ctx->channels,
+            is->audio_frame.nb_samples,
+            is->audio_ctx->sample_fmt,
+            1);
+        assert(data_size <= buf_size);
+        memcpy(audio_buf, is->audio_frame.data[0], data_size);
       }
       is->audio_pkt_data += len1;
       is->audio_pkt_size -= len1;
       if(data_size <= 0) {
-	/* No data yet, get more frames */
-	continue;
+        /* No data yet, get more frames */
+        continue;
       }
       pts = is->audio_clock;
       *pts_ptr = pts;
       n = 2 * is->audio_ctx->channels;
       is->audio_clock += (double)data_size /
-	(double)(n * is->audio_ctx->sample_rate);
+        (double)(n * is->audio_ctx->sample_rate);
       /* We have data, return it and come back for more later */
       return data_size;
     }
@@ -355,6 +355,7 @@ int audio_decode_frame(VideoState *is, uint8_t *audio_buf, int buf_size, double 
     is->audio_pkt_data = pkt->data;
     is->audio_pkt_size = pkt->size;
     /* if update, update the audio clock w/pts */
+    //containers that do not provide either pts or dts.
     if(pkt->pts != AV_NOPTS_VALUE) {
       is->audio_clock = av_q2d(is->audio_st->time_base)*pkt->pts;
     }
