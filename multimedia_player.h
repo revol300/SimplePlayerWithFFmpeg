@@ -18,6 +18,7 @@ extern "C" {
 #include <memory>
 
 #include "video_player.h"
+#include "audio_player.h"
 using namespace std;
 
 class MultimediaPlayer {
@@ -32,15 +33,12 @@ private:
   int initVideoPlayer();
 
   string file_path_;
-  int audio_index_;
-  AVCodec* audio_codec_;
-  AVCodecContext* audio_codec_context_;
 
   AVFormatContext* fmt_ctx_;
-  struct SwsContext *sws_ctx_;
 
   SDL_Event event;
   VideoPlayer* video_player_;
+  AudioPlayer* audio_player_;
 };
 
 #endif //MULTIMEDIA_PLAYER_H

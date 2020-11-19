@@ -3,7 +3,7 @@
 
 #define VIDEO_RENDER_EVENT (SDL_USEREVENT)
 
-MultimediaPlayer::MultimediaPlayer() : video_player_(nullptr), fmt_ctx_(NULL) {}
+MultimediaPlayer::MultimediaPlayer() : video_player_(nullptr), audio_player_(nullptr), fmt_ctx_(NULL) {}
 
 int MultimediaPlayer::openFile(string const& filename) {
   file_path_ = filename;
@@ -22,7 +22,7 @@ int MultimediaPlayer::openFile(string const& filename) {
   }
 
   initVideoPlayer();
-  /* initAudioPlayer(); */
+  initAudioPlayer();
   return 0;
 }
 
@@ -63,42 +63,44 @@ int MultimediaPlayer::initVideoPlayer() {
 }
 
 int MultimediaPlayer::initAudioPlayer() {
-  audio_index_ = av_find_best_stream	(fmt_ctx_, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
-  if(audio_index_ == AVERROR_STREAM_NOT_FOUND)
-    audio_index_ = -1;
+  int audio_index = av_find_best_stream	(fmt_ctx_, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
+  if(audio_index == AVERROR_STREAM_NOT_FOUND)
+    audio_index = -1;
 
-  if(audio_index_ < 0) {
+  if(audio_index < 0) {
     cout << "Failed to retrieve input stream information" << endl;
     return -3;
   }
-  audio_codec_ = avcodec_find_decoder(fmt_ctx_->streams[audio_index_]->codecpar->codec_id);
-  if(audio_codec_ == NULL){
+  auto audio_codec = avcodec_find_decoder(fmt_ctx_->streams[audio_index]->codecpar->codec_id);
+  if(audio_codec == NULL){
     cout << "Failed to find audio codec" << endl;
   }
 
   // Get the codec context
-  audio_codec_context_ = avcodec_alloc_context3(audio_codec_);
-  if (!audio_codec_context_){
+  auto audio_codec_context = avcodec_alloc_context3(audio_codec);
+  if (!audio_codec_context){
     cout << "Out of memory" << endl;
     return -4;
   }
 
   // Set the parameters of the codec context from the stream
   int result = avcodec_parameters_to_context(
-      audio_codec_context_,
-      fmt_ctx_->streams[audio_index_]->codecpar);
+      audio_codec_context,
+      fmt_ctx_->streams[audio_index]->codecpar);
   if(result < 0){
     return -5;
   }
 
-  if(avcodec_open2(audio_codec_context_, audio_codec_, NULL)<0)
+  if(avcodec_open2(audio_codec_context, audio_codec, NULL)<0)
     return -1; // Could not open codec
 
+  audio_player_ = new AudioPlayer(audio_index, audio_codec, audio_codec_context);
   return 0;
 }
 
 int MultimediaPlayer::openWindow() {
   video_player_->initRenderer();
+  audio_player_->initRenderer();
   return 0;
 }
 
@@ -114,13 +116,13 @@ int MultimediaPlayer::play() {
   /* SDL_CreateThread(renderVideo, "render video" ,video_player_); */
   SDL_AddTimer(1, videoRenderCallback, NULL);
   while (true) {
+    //@NOTE : demuxing과정을 class로 빼야할 필요 있음
     if (av_read_frame(fmt_ctx_, &packet) >= 0) {
       // Is this a packet from the video stream?
       if (packet.stream_index == video_player_->getVideoIndex()) {
-        //@NOTE: video_player에 queue를 만들어서 packet이 추가되도록 수정 필요
         video_player_->addPacket(packet);
-        /* video_player_->render(); */
-      } else if (packet.stream_index == audio_index_) {
+      } else if (packet.stream_index == audio_player_->getAudioIndex()) {
+        audio_player_->addPacket(packet);
         cout << "audio packet!!!" << endl;
       }
     }
@@ -135,6 +137,7 @@ int MultimediaPlayer::play() {
         return 0;
       case VIDEO_RENDER_EVENT:
         video_player_->render();
+        //videoRenderCallback은 별도의 thread에서 동작한다
         SDL_AddTimer(1, videoRenderCallback, NULL);
         break;
       default:
