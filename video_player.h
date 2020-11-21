@@ -16,6 +16,8 @@ extern "C" {
 #include <iostream>
 #include <memory>
 #include <queue>
+#include <mutex>
+
 using namespace std;
 
 class VideoPlayer {
