@@ -38,11 +38,13 @@ public:
   void quit();
   int getFrame(uint8_t *audio_buf, int buf_size);
   int getPacket();
+  int resample(AVCodecContext *aCodecCtx, AVFrame *af, uint8_t** audio_buf, int *audio_buf_size);
   void start();
 private:
   int audio_index_;
   int dev;
   AVCodec* audio_codec_;
+  SwrContext* swr_ctx;
   AVCodecContext* audio_codec_context_;
   SDL_AudioSpec audio_wanted_spec_;
   SDL_AudioSpec spec;
