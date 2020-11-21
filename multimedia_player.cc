@@ -113,6 +113,7 @@ static Uint32 videoRenderCallback(Uint32 interval, void *opaque) {
 
 int MultimediaPlayer::play() {
   AVPacket packet;
+  bool audio_start = false;
   /* SDL_CreateThread(renderVideo, "render video" ,video_player_); */
   SDL_AddTimer(1, videoRenderCallback, NULL);
   while (true) {
@@ -123,7 +124,11 @@ int MultimediaPlayer::play() {
         video_player_->addPacket(packet);
       } else if (packet.stream_index == audio_player_->getAudioIndex()) {
         audio_player_->addPacket(packet);
-        cout << "audio packet!!!" << endl;
+        if(!audio_start) {
+          audio_player_->start();
+          audio_start=true;
+        }
+        /* cout << "audio packet!!!" << endl; */
       }
     }
     av_packet_unref(&packet);

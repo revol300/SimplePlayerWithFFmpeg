@@ -102,7 +102,7 @@ void VideoPlayer::render() {
     return;
   AVPacket* packet = packet_queue_.front();
 
-  cout << "render video!!" << endl;
+  /* cout << "render video!!" << endl; */
   bool frameFinished = false;
   // Decode video frame
   auto used = avcodec_send_packet(video_codec_context_, packet);
@@ -115,7 +115,7 @@ void VideoPlayer::render() {
   }
   // Did we get a video frame?
   if (frameFinished) {
-    cout << "find frame!!" << endl;
+    /* cout << "find video frame!!" << endl; */
     // Convert the image into YUV format that SDL uses
     sws_scale(sws_ctx_, (uint8_t const * const *)pFrame->data,
         pFrame->linesize, 0, video_codec_context_->height,

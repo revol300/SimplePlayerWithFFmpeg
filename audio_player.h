@@ -35,6 +35,9 @@ public:
   void addPacket(AVPacket& packet);
   void render();
   void quit();
+  int getFrame(uint8_t *audio_buf, int buf_size);
+  int getPacket();
+  void start();
 private:
   int audio_index_;
   int dev;
@@ -43,7 +46,9 @@ private:
   SDL_AudioSpec audio_wanted_spec_;
   SDL_AudioSpec spec;
   AudioParams audio_hw_params_;
-  
+
+  AVPacket* pkt;
+
   queue<AVPacket*> packet_queue_;
   mutex queue_lock_;
 };
