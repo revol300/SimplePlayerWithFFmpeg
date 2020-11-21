@@ -155,6 +155,7 @@ int MultimediaPlayer::play() {
 int main(int argc, char* argv[]) {
   int ret;
 
+  av_register_all(); //@NOTE: For FFmpeg version < 4.0
   /* av_log_set_level(AV_LOG_DEBUG); */
 
   if(argc < 2) {
