@@ -1,6 +1,6 @@
 #include "multimedia_player.h"
-#include <unistd.h>
-
+#include "timer.h"
+#include <unistd.h> 
 #define VIDEO_RENDER_EVENT (SDL_USEREVENT)
 
 MultimediaPlayer::MultimediaPlayer() : video_player_(nullptr), audio_player_(nullptr), fmt_ctx_(NULL) {}
@@ -58,7 +58,7 @@ int MultimediaPlayer::initVideoPlayer() {
   if(avcodec_open2(video_codec_context_, video_codec_, NULL)<0)
     return -1; // Could not open codec
 
-  video_player_ = new VideoPlayer(video_index_, video_codec_, video_codec_context_);
+  video_player_ = new VideoPlayer(video_index_, video_codec_, video_codec_context_, fmt_ctx_->streams[video_index_]->time_base);
   return 0;
 }
 
@@ -104,18 +104,38 @@ int MultimediaPlayer::openWindow() {
   return 0;
 }
 
-static Uint32 videoRenderCallback(Uint32 interval, void *opaque) {
+static Uint32 videoRenderCallback(Uint32 interval, void *userdata) {
+  MultimediaPlayer* player = (MultimediaPlayer*) userdata;
   SDL_Event event;
   event.type = VIDEO_RENDER_EVENT;
   SDL_PushEvent(&event);
-  return 0; /* 0 means stop timer */
+  int delay = player->getVideoFrame();
+  if(delay <= 0){
+    return 1;
+  } else {
+    cout << "delay : " << delay << endl;
+    return delay;
+  }
+  return 1; /* 0 means stop timer */
+}
+
+int MultimediaPlayer::getVideoFrame() {
+  AVFrame* frame = video_player_->getFrame();
+  cout << "current time : " << Timer::getInstance()->getTime() << endl;
+  if(frame) {
+    int interval = video_player_->getFrameTime(frame) - Timer::getInstance()->getTime();
+    cout << "pts time : " << video_player_->getFrameTime(frame) << endl;
+    return interval;
+  } else {
+    return -1;
+  }
 }
 
 int MultimediaPlayer::play() {
   AVPacket packet;
   bool audio_start = false;
+  SDL_AddTimer(1, videoRenderCallback, this);
   /* SDL_CreateThread(renderVideo, "render video" ,video_player_); */
-  SDL_AddTimer(1, videoRenderCallback, NULL);
   while (true) {
     //@NOTE : demuxing과정을 class로 빼야할 필요 있음
     if (av_read_frame(fmt_ctx_, &packet) >= 0) {
@@ -140,11 +160,10 @@ int MultimediaPlayer::play() {
         SDL_Quit();
         exit(0);
         return 0;
-      case VIDEO_RENDER_EVENT:
+      case VIDEO_RENDER_EVENT: {
         video_player_->render();
-        //videoRenderCallback은 별도의 thread에서 동작한다
-        SDL_AddTimer(1, videoRenderCallback, NULL);
         break;
+      }
       default:
         break;
     }

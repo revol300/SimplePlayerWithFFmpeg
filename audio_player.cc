@@ -85,8 +85,7 @@ int AudioPlayer::resample(AVFrame *af, uint8_t** audio_buf, int *audio_buf_size)
 
 
 static void audio_callback(void *userdata, Uint8 * stream, int len) {
-   cout << "audio_callback called !" << endl;
-   cout << "need size : " << len << endl;
+   /* cout << "need size : " << len << endl; */
    AudioPlayer* audio_player = (AudioPlayer*) userdata;
    int len1,audio_size;
    static uint8_t audio_buf[(MAX_AUDIO_FRAME_SIZE*3)/2];
@@ -112,6 +111,9 @@ static void audio_callback(void *userdata, Uint8 * stream, int len) {
        len1 = len;
      memset(stream, 0, len1);
      SDL_MixAudioFormat(stream, (uint8_t *)audio_buf + audio_buf_index, AUDIO_S16SYS, len1, 64);
+     uint64_t current_time = Timer::getInstance()->getTime();
+     current_time += audio_player->bytesToMilisecond(len1);
+     Timer::getInstance()->setTime(current_time);
      len -= len1;
      stream += len1;
      audio_buf_index += len1;
@@ -188,7 +190,7 @@ void AudioPlayer::start() {
 
 int AudioPlayer::getFrame(uint8_t *audio_buf, int buf_size) {
 
-  cout << "audio get frame : " << buf_size << endl;
+  /* cout << "audio get frame : " << buf_size << endl; */
   uint8_t *audio_pkt_data = NULL;
   int audio_pkt_size = 0;
   AVFrame* frame = av_frame_alloc();
@@ -262,3 +264,6 @@ int AudioPlayer::getPacket() {
   return 0;
 }
 
+uint64_t AudioPlayer::bytesToMilisecond(uint32_t len) {
+  return (len*1000)/audio_hw_params_.bytes_per_sec;
+}

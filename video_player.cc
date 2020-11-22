@@ -1,10 +1,13 @@
 #include "video_player.h"
+#include "timer.h"
 
-VideoPlayer::VideoPlayer(int video_index, AVCodec* video_codec, AVCodecContext* video_codec_context) : video_index_(video_index),
+VideoPlayer::VideoPlayer(int video_index, AVCodec* video_codec, AVCodecContext* video_codec_context, AVRational time_base) : video_index_(video_index),
              video_codec_(video_codec),
              video_codec_context_(video_codec_context),
              pFrame(nullptr),
-             pFrameYUV(nullptr) {
+             pFrameYUV(nullptr),
+             time_base_(time_base),
+             frame_updated_(false) {
   
 } 
 
@@ -96,12 +99,11 @@ void VideoPlayer::quit() {
   SDL_DestroyWindow(screen_);
 }
 
-void VideoPlayer::render() {
-  std::lock_guard<std::mutex> lock_guard(queue_lock_);
+AVFrame* VideoPlayer::getFrame() {
+  cout << "packet queue size : " << packet_queue_.size() << endl;
   if(packet_queue_.size() <=0)
-    return;
+    return nullptr;
   AVPacket* packet = packet_queue_.front();
-
   /* cout << "render video!!" << endl; */
   bool frameFinished = false;
   // Decode video frame
@@ -113,8 +115,25 @@ void VideoPlayer::render() {
     if (used >= 0)
       frameFinished = true;
   }
+  av_packet_unref(packet);
+  {
+    std::lock_guard<std::mutex> lock_guard(queue_lock_);
+    packet_queue_.pop();
+  }
+  free(packet);
+  if(frameFinished){
+    frame_updated_ = true;
+    return pFrame;
+  } else {
+    return nullptr;
+  }
+}
+
+void VideoPlayer::render() {
   // Did we get a video frame?
-  if (frameFinished) {
+  if (pFrame && frame_updated_) {
+    cout << "render time : " << Timer::getInstance()->getTime() << endl;
+    cout << "render pts time : " << getFrameTime(pFrame) << endl;
     /* cout << "find video frame!!" << endl; */
     // Convert the image into YUV format that SDL uses
     sws_scale(sws_ctx_, (uint8_t const * const *)pFrame->data,
@@ -133,10 +152,8 @@ void VideoPlayer::render() {
     SDL_RenderClear(renderer_);
     SDL_RenderCopy(renderer_, texture_, NULL, NULL);
     SDL_RenderPresent(renderer_);
+    frame_updated_=false;
   }
-  av_packet_unref(packet);
-  packet_queue_.pop();
-  free(packet);
 }
 
 void VideoPlayer::addPacket(AVPacket& packet) {
@@ -146,4 +163,9 @@ void VideoPlayer::addPacket(AVPacket& packet) {
    if (av_packet_ref(copy, &packet) < 0)
      exit(-1);
    packet_queue_.push(copy);
+}
+
+//unit : milisecond
+uint64_t VideoPlayer::getFrameTime(AVFrame* frame) {
+  return av_q2d(time_base_)*frame->pts*1000;
 }

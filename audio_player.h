@@ -17,6 +17,8 @@ extern "C" {
 #include <memory>
 #include <queue>
 #include <mutex>
+
+#include "timer.h"
 using namespace std;
 
 typedef struct AudioParams {
@@ -40,6 +42,7 @@ public:
   int getPacket();
   int resample(AVFrame *af, uint8_t** audio_buf, int *audio_buf_size);
   void start();
+  uint64_t bytesToMilisecond(uint32_t len);
 private:
   int audio_index_;
   int dev;

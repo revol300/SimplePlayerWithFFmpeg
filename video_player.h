@@ -22,14 +22,17 @@ using namespace std;
 
 class VideoPlayer {
 public:
-  VideoPlayer(int video_index, AVCodec* video_codec, AVCodecContext* video_codec_context);
+  VideoPlayer(int video_index, AVCodec* video_codec, AVCodecContext* video_codec_context, AVRational time_base);
   int initRenderer();
   int getVideoIndex() const {return video_index_;};
   void addPacket(AVPacket& packet);
   void render();
   void quit();
+  AVFrame* getFrame();
+  uint64_t getFrameTime(AVFrame* frame);
 private:
   int video_index_;
+  bool frame_updated_;
   AVCodec* video_codec_;
   AVCodecContext* video_codec_context_;
   SDL_Texture *texture_;
@@ -37,11 +40,12 @@ private:
   Uint8 *yPlane, *uPlane, *vPlane;
   size_t yPlaneSz, uvPlaneSz;
   int uvPitch;
-  AVFrame *pFrame;
+  AVFrame* pFrame;
   AVFrame* pFrameYUV;
   SDL_Renderer *renderer_;
   SDL_Window *screen_;
   queue<AVPacket*> packet_queue_;
   mutex queue_lock_;
+  AVRational time_base_;
 };
 #endif //VIDEO_PLAYER_H_

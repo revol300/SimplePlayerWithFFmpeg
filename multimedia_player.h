@@ -16,6 +16,7 @@ extern "C" {
 
 #include <iostream>
 #include <memory>
+#include <mutex>
 
 #include "video_player.h"
 #include "audio_player.h"
@@ -28,6 +29,7 @@ public:
   int openFile(string const& filename);
   int openWindow();
   int play();
+  int getVideoFrame();
 private:
   int initAudioPlayer();
   int initVideoPlayer();
