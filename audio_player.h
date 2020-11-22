@@ -38,7 +38,7 @@ public:
   void quit();
   int getFrame(uint8_t *audio_buf, int buf_size);
   int getPacket();
-  int resample(AVCodecContext *aCodecCtx, AVFrame *af, uint8_t** audio_buf, int *audio_buf_size);
+  int resample(AVFrame *af, uint8_t** audio_buf, int *audio_buf_size);
   void start();
 private:
   int audio_index_;
