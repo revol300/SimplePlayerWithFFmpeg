@@ -54,26 +54,17 @@ ENDIF()
 include_directories(${FFMPEG_INCLUDE_DIR})
 
 find_package(SDL2 REQUIRED)
-IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  include_directories(${SDL2_INCLUDE_DIRS})
-ELSE()
-  include_directories(${SDL2_INCLUDE_DIR})
-ENDIF()
+include_directories(${SDL2_INCLUDE_DIRS})
 
 add_executable(screencapture screen_capture.cc)
 add_executable(tutorial02 tutorial02.cc)
 add_executable(tutorial03 tutorial03.cc)
-add_executable(videoplayer video_player.cc)
+add_executable(multimediaplayer multimedia_player.cc video_player.cc audio_player.cc)
 
 target_link_libraries(screencapture ${FFMPEG_LIBS})
 target_link_libraries(tutorial02 ${FFMPEG_LIBS} ${SDL2_LIBRARIES})
 target_link_libraries(tutorial03 ${FFMPEG_LIBS} ${SDL2_LIBRARIES})
-target_link_libraries(videoplayer ${FFMPEG_LIBS} ${SDL2_LIBRARIES})
+target_link_libraries(multimediaplayer ${FFMPEG_LIBS} ${SDL2_LIBRARIES})
 
 set(SIMPLE_PLAYER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../output")
-install(TARGETS screencapture tutorial02 tutorial03 videoplayer DESTINATION "${SIMPLE_PLAYER_DIR}")
-
-# include_directories(${FFMPEG_INCLUDE_DIR})
-# target_link_libraries(tutorial ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY})
-
-
+install(TARGETS screencapture tutorial02 tutorial03 multimediaplayer DESTINATION "${SIMPLE_PLAYER_DIR}")
