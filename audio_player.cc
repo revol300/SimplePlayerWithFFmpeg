@@ -12,39 +12,43 @@ int AudioPlayer::resample(AVFrame *af, uint8_t** audio_buf, int *audio_buf_size)
             audio_codec_context_->channels,
             af->nb_samples,
             audio_codec_context_->sample_fmt, 1);
-    dec_channel_layout =(af->channel_layout&&
+    
+    if (!swr_ctx) {
+      dec_channel_layout =(af->channel_layout&&
             av_frame_get_channels(af)== av_get_channel_layout_nb_channels(
                                     af->channel_layout)) ?
                     af->channel_layout :
-                    av_get_default_channel_layout(av_frame_get_channels(af));
-    if (af->format != audio_hw_params_.fmt
-            || af->sample_rate != audio_hw_params_.freq
-            /* || dec_channel_layout != audio_hw_params_.channel_layout */
-            || !swr_ctx) {
+                    av_get_default_channel_layout(spec.channels);
+      if (af->format != audio_hw_params_.fmt
+          || af->sample_rate != audio_hw_params_.freq
+          || dec_channel_layout != audio_hw_params_.channel_layout
+          || !swr_ctx) {
         swr_free(&swr_ctx);
         swr_ctx = swr_alloc_set_opts(NULL,
             audio_codec_context_->channel_layout, (AVSampleFormat)AV_SAMPLE_FMT_S16, spec.freq,
-            dec_channel_layout,        (AVSampleFormat)af->format,     af->sample_rate,
+            av_get_default_channel_layout(spec.channels), (AVSampleFormat)af->format,     af->sample_rate,
             0, NULL);
 
         if (!swr_ctx || swr_init(swr_ctx) < 0)
         {
-            swr_free(&swr_ctx);
-            return -1;
+          swr_free(&swr_ctx);
+          return -1;
         }
         printf("swr_init\n");
         audio_hw_params_.channels = av_frame_get_channels(af);
-        audio_hw_params_.fmt = (AVSampleFormat)af->format;
+        /* audio_hw_params_.fmt = (AVSampleFormat)af->format; */
+        audio_hw_params_.fmt = (AVSampleFormat)AV_SAMPLE_FMT_S16;
         audio_hw_params_.freq = af->sample_rate;
+      }
     }
 
     if (swr_ctx) {
         const uint8_t **in = (const uint8_t **) af->extended_data;
         uint8_t **out = audio_buf;
-        int out_count = (int64_t) af->nb_samples * audio_hw_params_.freq
+        int out_count = (int64_t) af->nb_samples *spec.freq
                 / af->sample_rate + 256;
         int out_size = av_samples_get_buffer_size(NULL,
-                audio_hw_params_.channels, out_count,
+                spec.channels, out_count,
                 audio_hw_params_.fmt, 0);
         int len2;
         if (out_size < 0)
@@ -69,7 +73,7 @@ int AudioPlayer::resample(AVFrame *af, uint8_t** audio_buf, int *audio_buf_size)
             if (swr_init(swr_ctx) < 0)
                 swr_free(&swr_ctx);
         }
-        resampled_data_size = len2 * audio_hw_params_.channels
+        resampled_data_size = len2 * spec.channels
                 * av_get_bytes_per_sample(audio_hw_params_.fmt);
     } else {
         *audio_buf = af->data[0];
@@ -81,7 +85,8 @@ int AudioPlayer::resample(AVFrame *af, uint8_t** audio_buf, int *audio_buf_size)
 
 
 static void audio_callback(void *userdata, Uint8 * stream, int len) {
-   /* cout << "audio_callback called !" << endl; */
+   cout << "audio_callback called !" << endl;
+   cout << "need size : " << len << endl;
    AudioPlayer* audio_player = (AudioPlayer*) userdata;
    int len1,audio_size;
    static uint8_t audio_buf[(MAX_AUDIO_FRAME_SIZE*3)/2];
@@ -209,8 +214,8 @@ int AudioPlayer::getFrame(uint8_t *audio_buf, int buf_size) {
         uint8_t* temp_buf;
         data_size = resample(frame, &temp_buf, &buf_size);
         assert(data_size <= buf_size);
-        cout << "data size : " << data_size << endl;
-        cout << "buf size : " << buf_size << endl;
+        /* cout << "data size : " << data_size << endl;
+         * cout << "buf size : " << buf_size << endl; */
         memcpy(audio_buf, temp_buf, data_size);
       }
 
