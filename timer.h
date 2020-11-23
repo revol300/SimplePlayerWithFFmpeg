@@ -15,6 +15,7 @@ extern "C" {
 
 #include <iostream>
 #include <memory>
+#include <mutex>
 
 using namespace std;
 
