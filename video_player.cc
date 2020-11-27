@@ -132,8 +132,8 @@ AVFrame* VideoPlayer::getFrame() {
 void VideoPlayer::render() {
   // Did we get a video frame?
   if (pFrame && frame_updated_) {
-    cout << "render time : " << Timer::getInstance()->getTime() << endl;
-    cout << "render pts time : " << getFrameTime(pFrame) << endl;
+    cerr << "render time : " << Timer::getInstance()->getTime() << endl;
+    cerr << "render pts time : " << getFrameTime(pFrame) << endl;
     /* cout << "find video frame!!" << endl; */
     // Convert the image into YUV format that SDL uses
     sws_scale(sws_ctx_, (uint8_t const * const *)pFrame->data,

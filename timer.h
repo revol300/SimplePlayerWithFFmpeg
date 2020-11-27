@@ -23,12 +23,17 @@ class Timer {
   public:
     static Timer* getInstance();
     int64_t getTime();
-    void setTime(int64_t time);
+    int64_t getAudioTime();
+    int64_t setAudioTime(int64_t time);
+    int64_t getRelativeTime();
+    void setRelativeTime(int64_t time);
   private:
     Timer();
     static Timer* instance_;
     mutex lock_;
     int64_t current_time_;
+    int64_t origin_time_;
+    int64_t audio_time_;
 };
 
 #endif //TIMER_H

@@ -113,7 +113,6 @@ static Uint32 videoRenderCallback(Uint32 interval, void *userdata) {
   if(delay <= 0){
     return 1;
   } else {
-    cout << "delay : " << delay << endl;
     return delay;
   }
   return 1; /* 0 means stop timer */
@@ -121,10 +120,11 @@ static Uint32 videoRenderCallback(Uint32 interval, void *userdata) {
 
 int MultimediaPlayer::getVideoFrame() {
   AVFrame* frame = video_player_->getFrame();
-  cout << "current time : " << Timer::getInstance()->getTime() << endl;
+  /* cerr << "current time : " << Timer::getInstance()->getTime() << endl;
+   * cerr << "relative time : " << Timer::getInstance()->getRelativeTime() << endl; */
   if(frame) {
-    int interval = video_player_->getFrameTime(frame) - Timer::getInstance()->getTime();
-    cout << "pts time : " << video_player_->getFrameTime(frame) << endl;
+    int interval = video_player_->getFrameTime(frame) - Timer::getInstance()->getRelativeTime();
+    /* cout << "pts time : " << video_player_->getFrameTime(frame) << endl; */
     return interval;
   } else {
     return -1;

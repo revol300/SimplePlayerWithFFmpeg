@@ -83,6 +83,48 @@ int AudioPlayer::resample(AVFrame *af, uint8_t** audio_buf, int *audio_buf_size)
 }
 
 
+/* static void sdl_audio_callback(void *opaque, Uint8 *stream, int len)
+ * {
+ *   VideoState *is = opaque;
+ *   int audio_size, len1;
+ *
+ *   audio_callback_time = av_gettime_relative();
+ *
+ *   while (len > 0) {
+ *     if (is->audio_buf_index >= is->audio_buf_size) {
+ *       audio_size = audio_decode_frame(is);
+ *       if (audio_size < 0) {
+ *         [> if error, just output silence <]
+ *         is->audio_buf = NULL;
+ *         is->audio_buf_size = SDL_AUDIO_MIN_BUFFER_SIZE / is->audio_tgt.frame_size * is->audio_tgt.frame_size;
+ *       } else {
+ *         if (is->show_mode != SHOW_MODE_VIDEO)
+ *           update_sample_display(is, (int16_t *)is->audio_buf, audio_size);
+ *         is->audio_buf_size = audio_size;
+ *       }
+ *       is->audio_buf_index = 0;
+ *     }
+ *     len1 = is->audio_buf_size - is->audio_buf_index;
+ *     if (len1 > len)
+ *       len1 = len;
+ *     if (!is->muted && is->audio_buf && is->audio_volume == SDL_MIX_MAXVOLUME)
+ *       memcpy(stream, (uint8_t *)is->audio_buf + is->audio_buf_index, len1);
+ *     else {
+ *       memset(stream, 0, len1);
+ *       if (!is->muted && is->audio_buf)
+ *         SDL_MixAudioFormat(stream, (uint8_t *)is->audio_buf + is->audio_buf_index, AUDIO_S16SYS, len1, is->audio_volume);
+ *     }
+ *     len -= len1;
+ *     stream += len1;
+ *     is->audio_buf_index += len1;
+ *   }
+ *   is->audio_write_buf_size = is->audio_buf_size - is->audio_buf_index;
+ *   [> Let's assume the audio driver that is used by SDL has two periods. <]
+ *   if (!isnan(is->audio_clock)) {
+ *     set_clock_at(&is->audclk, is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / is->audio_tgt.bytes_per_sec, is->audio_clock_serial, audio_callback_time / 1000000.0);
+ *     sync_clock_to_slave(&is->extclk, &is->audclk);
+ *   }
+ * } */
 
 static void audio_callback(void *userdata, Uint8 * stream, int len) {
    /* cout << "need size : " << len << endl; */
@@ -91,6 +133,8 @@ static void audio_callback(void *userdata, Uint8 * stream, int len) {
    static uint8_t audio_buf[(MAX_AUDIO_FRAME_SIZE*3)/2];
    static unsigned int audio_buf_size = 0;
    static unsigned int audio_buf_index =0;
+
+   int audio_bytes_len = len;
    while (len > 0) {
      if (audio_buf_index >= audio_buf_size) {
        audio_size = audio_player->getFrame(audio_buf, sizeof(audio_buf));
@@ -111,13 +155,21 @@ static void audio_callback(void *userdata, Uint8 * stream, int len) {
        len1 = len;
      memset(stream, 0, len1);
      SDL_MixAudioFormat(stream, (uint8_t *)audio_buf + audio_buf_index, AUDIO_S16SYS, len1, 64);
-     uint64_t current_time = Timer::getInstance()->getTime();
-     current_time += audio_player->bytesToMilisecond(len1);
-     Timer::getInstance()->setTime(current_time);
+     
      len -= len1;
      stream += len1;
      audio_buf_index += len1;
    }
+
+   int64_t audio_time = Timer::getInstance()->getAudioTime() + audio_player->bytesToMilisecond(audio_bytes_len);
+   Timer::getInstance()->setAudioTime(audio_time);
+   cerr << "audio_time_diff : " << Timer::getInstance()->getRelativeTime() - Timer::getInstance()->getAudioTime() << endl;
+   cerr << "audio_buf size time : " << audio_player->bytesToMilisecond(SDL_AUDIO_BUFFER_SIZE) << endl; 
+   /* Timer::getInstance()->setRelativeTime(audio_time+3*32); */
+   /* cerr << "audio_callback time : " << Timer::getInstance()->getRelativeTime() << endl; 
+    * cerr << "audio_time : " << Timer::getInstance()->getAudioTime() << endl; */
+   
+   /* Let's assume the audio driver that is used by SDL has two periods. */
 }
 
 AudioPlayer::AudioPlayer(int audio_index, AVCodec* audio_codec, AVCodecContext* audio_codec_context) : audio_index_(audio_index),
