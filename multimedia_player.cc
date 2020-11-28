@@ -94,7 +94,7 @@ int MultimediaPlayer::initAudioPlayer() {
   if(avcodec_open2(audio_codec_context, audio_codec, NULL)<0)
     return -1; // Could not open codec
 
-  audio_player_ = new AudioPlayer(audio_index, audio_codec, audio_codec_context);
+  audio_player_ = new AudioPlayer(audio_index, audio_codec, audio_codec_context,fmt_ctx_->streams[audio_index]->time_base);
   return 0;
 }
 
