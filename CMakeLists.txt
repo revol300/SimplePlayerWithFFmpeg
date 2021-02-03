@@ -10,17 +10,30 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   #FFMPEG
-  # NOTE : On MacOS, brew install ffmpeg does not install pc file
-  # Therefore, write path to ffmpeg library manually
-  set(FFMPEG_INCLUDE_DIR "/usr/local/Cellar/ffmpeg/4.3.1_3/include")
-  set(FFMPEG_LIB_DIR "/usr/local/Cellar/ffmpeg/4.3.1_3/lib")
+
+  # # NOTE : On MacOS, brew install ffmpeg makes many pc files
+  # # Therefore, check each ffmpeg library manually
+  # find_package(PkgConfig REQUIRED)
+  # pkg_check_modules(AVCODEC libavcodec REQUIRED)
+  # pkg_check_modules(FFMPEG libavcodec REQUIRED)
+  # pkg_check_modules(AVFORMAT libavformat REQUIRED)
+  # pkg_check_modules(AVUTIL libavutil REQUIRED)
+  # pkg_check_modules(SWSCALE libswscale REQUIRED)
+  # pkg_check_modules(RESAMPLE libswresample REQUIRED)
+
+  # Desipite of using pkg_check_modules....
+  # includ_dir of each library stays as a /usr/local/include (which is not working)
+  # By the way, HomeBrew collects all .h .dylib files in /usr/local/opt
+  # Therefore, i will gonna use this path
+
+  set(FFMPEG_INCLUDE_DIR "/usr/local/opt/ffmpeg/include/")
+  set(FFMPEG_LIB_DIR "/usr/local/opt/ffmpeg/lib")
   set(AVCODEC_LIBRARY "${FFMPEG_LIB_DIR}/libavcodec.dylib")
   set(AVFORMAT_LIBRARY "${FFMPEG_LIB_DIR}/libavformat.dylib")
   set(AVUTIL_LIBRARY "${FFMPEG_LIB_DIR}/libavutil.dylib")
   set(SWSCALE_LIBRARY "${FFMPEG_LIB_DIR}/libswscale.dylib")
   set(RESAMPLE_LIBRARY "${FFMPEG_LIB_DIR}/libswresample.dylib")
   set(FFMPEG_LIBS ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY} ${RESAMPLE_LIBRARY})
-
 
   SET(OperatingSystem "Mac OS X")
 ELSEIF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
