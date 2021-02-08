@@ -31,7 +31,6 @@ private:
   AVCodec* audio_codec_;
   AVCodecContext *video_codec_context_;
   AVCodecContext *audio_codec_context_;
-
 };
 
 #endif //DEMUXER

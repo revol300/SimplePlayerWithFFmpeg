@@ -30,7 +30,7 @@ ScreenCapture::ScreenCapture() : fmt_ctx_(NULL),
                                  audio_codec_(nullptr),
                                  video_codec_context_(nullptr) {}
 
-ScreenCapture::~ScreenCapture(){
+ScreenCapture::~ScreenCapture() {
   if(fmt_ctx_)
     avformat_close_input(&fmt_ctx_);
   if(video_codec_context_)
