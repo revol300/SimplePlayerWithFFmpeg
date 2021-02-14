@@ -37,7 +37,7 @@ ScreenCapture::~ScreenCapture() {
     avcodec_free_context(&video_codec_context_);
 }
 
-void ScreenCapture::setURL(std::string const& filename) {
+void ScreenCapture::setURL(string const& filename) {
   file_path_ = filename;
 }
 
@@ -199,16 +199,16 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  shared_ptr<ScreenCapture> capture_tool = make_shared<ScreenCapture>();
-  capture_tool->setURL(argv[1]);
+  shared_ptr<Demuxer> capture_tool = make_shared<Demuxer>();
+  /* capture_tool->setURL(argv[1]); */
 
-  if(capture_tool->init() < 0) {
+  if(capture_tool->init(argv[1]) < 0) {
     cout << "Failed to init capture tool" << endl;
     return -1;
   }
 
   // AVPacket is used to store packed stream data.
-  capture_tool->captureFrames(500);
+  /* capture_tool->captureFrames(500); */
   
   return 0;
 
