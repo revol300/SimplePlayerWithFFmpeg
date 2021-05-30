@@ -1,10 +1,7 @@
 project(ffmpeg_tutorial)
 cmake_minimum_required(VERSION 3.10)
 
-set(VCPKG_INCLUDE_PATH C:/vcpkg/installed/x86-windows/include)
-set(VCPKG_LIBRARY_PATH C:/vcpkg/installed/x86-windows/lib)
-set(VCPKG_LIBRARY_MANUAL_PATH C:/vcpkg/installed/x86-windows/lib/manual-link)
-set(VCPKG_CMAKE_PATH C:/vcpkg/installed/x86-windows/share)
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
 
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 14)
@@ -64,6 +61,11 @@ ELSEIF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(FFMPEG_LIBS ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY} ${RESAMPLE_LIBRARY})
   SET(OperatingSystem "Linux")
 ELSEIF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+  set(VCPKG_INCLUDE_PATH C:/vcpkg/installed/x86-windows/include)
+  set(VCPKG_LIBRARY_PATH C:/vcpkg/installed/x86-windows/lib)
+  set(VCPKG_LIBRARY_MANUAL_PATH C:/vcpkg/installed/x86-windows/lib/manual-link)
+  set(VCPKG_CMAKE_PATH C:/vcpkg/installed/x86-windows/share)
+
   find_path( AVCODEC_INCLUDE_DIR libavcodec/avcodec.h HINTS ${VCPKG_INCLUDE_PATH})
   find_library(AVCODEC_LIBRARY avcodec HINTS ${VCPKG_LIBRARY_PATH} )
 
