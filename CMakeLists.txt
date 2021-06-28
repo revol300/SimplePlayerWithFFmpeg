@@ -101,9 +101,9 @@ ELSE()
 ENDIF()
 
 include_directories(${SDL2_INCLUDE_DIRS})
-add_executable(screencapture screen_capture.cc)
-add_executable(tutorial02 tutorial02.cc)
-add_executable(tutorial03 tutorial03.cc)
+add_executable(screencapture tutorial01/demuxer.cc tutorial01/screen_capture.cc)
+add_executable(tutorial02 tutorial02/tutorial02.cc)
+add_executable(tutorial03 tutorial03/tutorial03.cc)
 add_executable(multimediaplayer multimedia_player.cc video_player.cc audio_player.cc timer.cc)
 
 target_link_libraries(screencapture ${FFMPEG_LIBS})
