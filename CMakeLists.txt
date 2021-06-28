@@ -40,7 +40,7 @@ ELSEIF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   # # find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL SWRESAMPLE SWSCALE)
   # FFMPEG DOES NOT SUPPORT CMAKE!!!!!!!!!!!!!!!!! DO NOT USE find_package
   # find_path, find_library set path of FFMPEG to /usr/local/ffmpeg do not use it
-
+  #C:/vcpkg/packages
   # To find and use ffmpeg avcodec library
   find_path( AVCODEC_INCLUDE_DIR libavcodec/avcodec.h )
   find_library(AVCODEC_LIBRARY avcodec )
@@ -60,15 +60,47 @@ ELSEIF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(FFMPEG_INCLUDE_DIR ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${SWSCALE_INCLUDE_DIR} ${RESAMPLE_INCLUDE_DIR})
   set(FFMPEG_LIBS ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY} ${RESAMPLE_LIBRARY})
   SET(OperatingSystem "Linux")
+ELSEIF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+  set(VCPKG_INCLUDE_PATH C:/vcpkg/installed/x86-windows/include)
+  set(VCPKG_LIBRARY_PATH C:/vcpkg/installed/x86-windows/lib)
+  set(VCPKG_LIBRARY_MANUAL_PATH C:/vcpkg/installed/x86-windows/lib/manual-link)
+  set(VCPKG_CMAKE_PATH C:/vcpkg/installed/x86-windows/share)
+
+  find_path( AVCODEC_INCLUDE_DIR libavcodec/avcodec.h HINTS ${VCPKG_INCLUDE_PATH})
+  find_library(AVCODEC_LIBRARY avcodec HINTS ${VCPKG_LIBRARY_PATH} )
+
+  find_path( AVFORMAT_INCLUDE_DIR libavformat/avformat.h HINTS ${VCPKG_INCLUDE_PATH})
+  find_library( AVFORMAT_LIBRARY avformat HINTS ${VCPKG_LIBRARY_PATH} )
+
+  find_path( AVUTIL_INCLUDE_DIR libavutil/avutil.h HINTS ${VCPKG_INCLUDE_PATH})
+  find_library( AVUTIL_LIBRARY avutil HINTS ${VCPKG_LIBRARY_PATH} )
+
+  find_path( SWSCALE_INCLUDE_DIR libswscale/swscale.h HINTS ${VCPKG_INCLUDE_PATH})
+  find_library( SWSCALE_LIBRARY swscale HINTS ${VCPKG_LIBRARY_PATH} )
+
+  find_path( RESAMPLE_INCLUDE_DIR libswresample/swresample.h HINTS ${VCPKG_INCLUDE_PATH})
+  find_library( RESAMPLE_LIBRARY swresample HINTS ${VCPKG_LIBRARY_PATH} )
+
+  set(FFMPEG_INCLUDE_DIR ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${SWSCALE_INCLUDE_DIR} ${RESAMPLE_INCLUDE_DIR})
+  set(FFMPEG_LIBS ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY} ${RESAMPLE_LIBRARY})
+  SET(OperatingSystem "Windows")
 ELSE()
   SET(OperatingSystem "Others")
 ENDIF()
 
 include_directories(${FFMPEG_INCLUDE_DIR})
 
-find_package(SDL2 REQUIRED)
-include_directories(${SDL2_INCLUDE_DIRS})
+IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows") 
+  find_path( SDL2_INCLUDE_DIR SDL2/SDL.h HINTS ${VCPKG_INCLUDE_PATH})
+  set(SDL2_INCLUDE_DIR "${SDL2_INCLUDE_DIR}/SDL2")
+  find_library(SDL2_LIBRARY SDL2 HINTS ${VCPKG_LIBRARY_PATH})
+  find_library(SDL2_MAIN_LIBRARY SDL2main HINTS ${VCPKG_LIBRARY_MANUAL_PATH})
+  set(SDL2_LIBRARIES ${SDL2_LIBRARY} ${SDL2_MAIN_LIBRARY})
+ELSE()
+  find_package(SDL2 REQUIRED)
+ENDIF()
 
+include_directories(${SDL2_INCLUDE_DIRS})
 add_executable(screencapture screen_capture.cc)
 add_executable(tutorial02 tutorial02.cc)
 add_executable(tutorial03 tutorial03.cc)
