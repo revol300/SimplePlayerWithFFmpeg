@@ -29,7 +29,9 @@ public:
   void render();
   void quit();
   AVFrame* getFrame();
+  void convertPixel();
   uint64_t getFrameTime(AVFrame* frame);
+  uint64_t getPacketTime(AVPacket* packet);
 private:
   int video_index_;
   bool frame_updated_;

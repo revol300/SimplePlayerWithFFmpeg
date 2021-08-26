@@ -104,6 +104,19 @@ AVFrame* VideoPlayer::getFrame() {
   if(packet_queue_.size() <=0)
     return nullptr;
   AVPacket* packet = packet_queue_.front();
+  cout << "Packet Time : " << getPacketTime(packet) << endl;
+  cout << "Current Time : " << Timer::getInstance()->getRelativeTime() <<endl;
+  int time_diff = getPacketTime(packet) - Timer::getInstance()->getRelativeTime();
+  if(time_diff < 0) {
+    cerr << "Packet Drop " << endl;
+    av_packet_unref(packet);
+    {
+      std::lock_guard<std::mutex> lock_guard(queue_lock_);
+      packet_queue_.pop();
+    }
+    free(packet);
+    return nullptr;
+  }
   /* cout << "render video!!" << endl; */
   bool frameFinished = false;
   // Decode video frame
@@ -129,16 +142,22 @@ AVFrame* VideoPlayer::getFrame() {
   }
 }
 
+void VideoPlayer::convertPixel() {
+  sws_scale(sws_ctx_, (uint8_t const * const *)pFrame->data,
+        pFrame->linesize, 0, video_codec_context_->height,
+        pFrameYUV->data, pFrameYUV->linesize);
+}
+
 void VideoPlayer::render() {
   // Did we get a video frame?
   if (pFrame && frame_updated_) {
-    cerr << "render time : " << Timer::getInstance()->getTime() << endl;
-    cerr << "render pts time : " << getFrameTime(pFrame) << endl;
     /* cout << "find video frame!!" << endl; */
     // Convert the image into YUV format that SDL uses
-    sws_scale(sws_ctx_, (uint8_t const * const *)pFrame->data,
-        pFrame->linesize, 0, video_codec_context_->height,
-        pFrameYUV->data, pFrameYUV->linesize);
+    /* sws_scale(sws_ctx_, (uint8_t const * const *)pFrame->data,
+     *     pFrame->linesize, 0, video_codec_context_->height,
+     *     pFrameYUV->data, pFrameYUV->linesize); */
+    cerr << "render time : " << Timer::getInstance()->getTime() << endl;
+    cerr << "render pts time : " << getFrameTime(pFrame) << endl;
     SDL_UpdateYUVTexture(
         texture_,
         NULL,
@@ -168,4 +187,8 @@ void VideoPlayer::addPacket(AVPacket& packet) {
 //unit : milisecond
 uint64_t VideoPlayer::getFrameTime(AVFrame* frame) {
   return av_q2d(time_base_)*frame->pts*1000;
+}
+
+uint64_t VideoPlayer::getPacketTime(AVPacket* packet) {
+  return av_q2d(time_base_)*packet->pts*1000;
 }

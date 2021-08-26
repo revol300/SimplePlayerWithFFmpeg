@@ -124,6 +124,10 @@ int MultimediaPlayer::getVideoFrame() {
    * cerr << "relative time : " << Timer::getInstance()->getRelativeTime() << endl; */
   if(frame) {
     int interval = video_player_->getFrameTime(frame) - Timer::getInstance()->getRelativeTime();
+    if(interval < 100)
+      return -1;
+    video_player_->convertPixel();
+    interval = video_player_->getFrameTime(frame) - Timer::getInstance()->getRelativeTime();
     /* cout << "pts time : " << video_player_->getFrameTime(frame) << endl; */
     return interval;
   } else {
