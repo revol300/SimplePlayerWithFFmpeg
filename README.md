@@ -12,3 +12,5 @@
 - Synchorinze them
 ## Tutorial 6
 - Implement seek!!!
+
+ffplay.c의 refresh_loop_wait_event 참조 
