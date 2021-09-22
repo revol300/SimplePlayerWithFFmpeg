@@ -106,7 +106,7 @@ add_executable(tutorial02 tutorial02/tutorial02.cc)
 add_executable(tutorial03 tutorial03/tutorial03.cc)
 add_executable(demuxer demuxer/demuxer_test.cc demuxer/demuxer.cc)
 add_executable(decoder decoder/decoder_test.cc demuxer/demuxer.cc decoder/decoder.cc)
-add_executable(converter converter/conveter_test.cc demuxer/demuxer.cc decoder/decoder.cc converter/audio_converter.cc converter/video_converter.cc)
+add_executable(converter converter/converter_test.cc demuxer/demuxer.cc decoder/decoder.cc converter/audio_converter.cc converter/video_converter.cc)
 add_executable(multimediaplayer multimedia_player.cc video_player.cc audio_player.cc timer.cc)
 
 target_link_libraries(screencapture ${FFMPEG_LIBS})
