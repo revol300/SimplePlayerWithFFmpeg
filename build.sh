@@ -1,15 +1,9 @@
-if ! test -f "$../build" ; then
-  mkdir ../build
-fi
+PROJECT_PATH=$(git rev-parse --show-toplevel)
+echo ${PROJECT_PATH}
 
-if ! test -f "$../output" ; then
-  mkdir ../output
-fi
-
-if ! test -f "$../build/Makefile"; then
-  cd ../build
-  cmake ../SimplePlayerWithFFmpeg
-fi
-cd ../build
-make install -j9
-
+mkdir -p ${PROJECT_PATH}/build
+pushd ${PROJECT_PATH}/build
+  conan install ${PROJECT_PATH}/conan
+  cmake ${PROJECT_PATH}
+  make -j9
+popd
