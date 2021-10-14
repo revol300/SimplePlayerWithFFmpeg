@@ -58,6 +58,10 @@ bool Decoder::getFrame(std::shared_ptr<AVPacket>& packet, std::shared_ptr<AVFram
   return true;
 }
 
+void Decoder::flush() {
+  avcodec_flush_buffers(codec_context_.get());
+}
+
 
 
 

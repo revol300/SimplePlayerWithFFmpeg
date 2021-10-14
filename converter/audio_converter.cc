@@ -12,7 +12,7 @@ AudioConverter::AudioConverter(std::shared_ptr<AVCodecContext> &audio_codec_cont
 AudioConverter::~AudioConverter() {}
 
 bool AudioConverter::init() {
-  if (SDL_Init(SDL_INIT_AUDIO)) {
+  if (SDL_InitSubSystem(SDL_INIT_AUDIO)) {
     cout << "Could not initialize SDL - " << SDL_GetError() <<endl;
     return -1;
   }
@@ -74,7 +74,7 @@ bool AudioConverter::init() {
   return true;
 }
 
-int AudioConverter::getFrame(AVFrame *af, std::shared_ptr<uint8_t*>& audio_buf) {
+int AudioConverter::getFrame(AVFrame *af, std::shared_ptr<AudioFrame>& audio_buf) {
     int resampled_data_size = 0;
     int64_t dec_channel_layout;
     int data_size = av_samples_get_buffer_size(
@@ -146,15 +146,25 @@ int AudioConverter::getFrame(AVFrame *af, std::shared_ptr<uint8_t*>& audio_buf) 
             if (swr_init(swr_ctx_.get()) < 0)
               swr_ctx_.reset();
         }
-        audio_buf = std::shared_ptr<uint8_t *>(&memory, [](uint8_t ** p) {
-            std::cout << "converted_buffer freed (Audio)" << std::endl;
-            av_free((void*)*p);
-        });
+        /* audio_buf = std::shared_ptr<uint8_t *>(&memory, [](uint8_t ** p) {
+         *     std::cout << "converted_buffer freed (Audio)" << std::endl;
+         *     av_free((void*)*p);
+         * }); */
         resampled_data_size = len2 * audio_hw_params_.channels
                 * av_get_bytes_per_sample(audio_hw_params_.fmt);
+        AudioFrame* audio_frame = new AudioFrame();
+        audio_frame->data = memory;
+        audio_frame->size = resampled_data_size;
+        audio_frame->pts = af->pts;
+        audio_buf = std::shared_ptr<AudioFrame>(audio_frame, [](AudioFrame* f) {
+            // std::cout << "converted_buffer freed (Audio)" << std::endl;
+            av_free((void*) f->data);
+            delete f;
+        });
     } else {
-        *audio_buf = af->data[0];
-        resampled_data_size = data_size;
+      //@TODO : FIXME
+      /* *audio_buf = af->data[0];
+       * resampled_data_size = data_size; */
     }
     return resampled_data_size;
 }

@@ -22,6 +22,8 @@ public:
   std::shared_ptr<AVFormatContext>& getFormatContext() {
     return fmt_ctx_;
   }
+  // microseconds
+  void seek(int64_t time);
 private:
   std::shared_ptr<AVFormatContext> fmt_ctx_;
   std::string file_path_;

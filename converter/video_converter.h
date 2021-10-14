@@ -9,8 +9,6 @@ extern "C" {
 
 #include <memory>
 
-using SwsContext = struct SwsContext;
-
 class VideoConverter {
 public:
   VideoConverter(std::shared_ptr<AVCodecContext> &video_codec_context);

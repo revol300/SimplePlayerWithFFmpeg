@@ -29,6 +29,7 @@ int VideoConverter::getFrame(std::shared_ptr<AVFrame>& in, std::shared_ptr<AVFra
       AV_PIX_FMT_YUV420P,
       32
   );
+  pFrameYUV->pts = in->pts;
   sws_scale(sws_ctx_,
       in->data,
       in->linesize,
@@ -37,7 +38,7 @@ int VideoConverter::getFrame(std::shared_ptr<AVFrame>& in, std::shared_ptr<AVFra
       pFrameYUV->data,
       pFrameYUV->linesize);
   out = std::shared_ptr<AVFrame>(pFrameYUV, [](AVFrame* frame) {
-      std::cout << "converted_buffer freed (Video)" << std::endl;
+      // std::cout << "converted_buffer freed (Video)" << std::endl;
       av_freep(&frame->data[0]);
       av_frame_free(&frame);
     }
