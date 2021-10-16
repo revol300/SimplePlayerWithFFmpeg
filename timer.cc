@@ -16,6 +16,7 @@ int64_t Timer::getAudioTime() {
 
 int64_t Timer::setAudioTime(int64_t time) {
   audio_time_ = time;
+  return time;
 }
 
 int64_t Timer::getTime() {return av_gettime()/1000;}

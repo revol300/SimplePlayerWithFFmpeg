@@ -5,6 +5,7 @@ extern "C" {
 #include <libavformat/avformat.h>
 }
 #include <string>
+#include <memory>
 
 class Decoder{
 public:

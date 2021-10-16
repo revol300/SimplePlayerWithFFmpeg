@@ -9,6 +9,7 @@ extern "C" {
 #include <SDL.h>
 }
 #include <string>
+#include <memory>
 
 class AudioConverter {
 public:

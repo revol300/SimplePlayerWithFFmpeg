@@ -1,7 +1,11 @@
 #include "video_renderer.h"
 
 #include <iostream>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 
 #include "../timer.h"
 
@@ -57,7 +61,11 @@ bool VideoRenderer::init() {
 void VideoRenderer::runLoop() {
   running = true;
   while(running) {
+#ifdef _WIN32
+    Sleep(1);
+#else
     usleep(1000);
+#endif
     mutex_.lock();
     if(frame_queue_.size() > 0) {
       std::shared_ptr<AVFrame> in = frame_queue_.front();
@@ -89,6 +97,7 @@ int VideoRenderer::getFrame(std::shared_ptr<AVFrame>& in) {
   mutex_.lock();
   frame_queue_.push(in);
   mutex_.unlock();
+  return 0;
 }
 
 void VideoRenderer::stop() {

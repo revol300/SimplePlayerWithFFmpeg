@@ -1,5 +1,10 @@
 [requires]
-ffmpeg/4.3.2
-sdl2/2.0.16@bincrafters/stable
+ffmpeg/[>=4.3.2]
+sdl2/[>=2.0.9]@bincrafters/stable
+[options]
+ffmpeg:with_ssl=False
+ffmpeg:with_libmp3lame=False
+ffmpeg:with_libfdk_aac=False
+ffmpeg:with_openjpeg=False
 [generators]
 cmake

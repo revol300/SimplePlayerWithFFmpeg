@@ -33,7 +33,7 @@ bool AudioConverter::init() {
   audio_wanted_spec_.userdata = this;
 
   SDL_AudioSpec hw_spec;
-  dev = SDL_OpenAudioDevice(NULL, 0, &audio_wanted_spec_, &hw_spec, SDL_AUDIO_ALLOW_FORMAT_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
+  dev = SDL_OpenAudioDevice(NULL, 0, &audio_wanted_spec_, &hw_spec, 0);
   if (dev == 0) {
     cerr << "open audio device failed!!" << endl;
     cerr << "Error : " << SDL_GetError() << endl;
@@ -85,7 +85,7 @@ int AudioConverter::getFrame(AVFrame *af, std::shared_ptr<AudioFrame>& audio_buf
         1);
     
     if (!swr_ctx_.get()) {
-      SwrContext* swr_ctx;
+      SwrContext* swr_ctx = nullptr;
       dec_channel_layout =
         (af->channel_layout &&
          av_frame_get_channels(af) == av_get_channel_layout_nb_channels(af->channel_layout)) ?

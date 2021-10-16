@@ -10,14 +10,36 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 INCLUDE(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 
+include_directories(
+	${PROJECT_SOURCE_DIR}/demuxer
+	${PROJECT_SOURCE_DIR}/decoder
+	${PROJECT_SOURCE_DIR}/converter
+	${PROJECT_SOURCE_DIR}/renderer
+)
+
 add_executable(demuxer demuxer/demuxer_test.cc demuxer/demuxer.cc)
 add_executable(decoder decoder/decoder_test.cc demuxer/demuxer.cc decoder/decoder.cc)
 add_executable(converter converter/converter_test.cc demuxer/demuxer.cc decoder/decoder.cc converter/audio_converter.cc converter/video_converter.cc)
 add_executable(renderer renderer/renderer_test.cc demuxer/demuxer.cc decoder/decoder.cc converter/audio_converter.cc converter/video_converter.cc renderer/video_renderer.cc renderer/audio_renderer.cc timer.cc)
 add_executable(player player/player.cc demuxer/demuxer.cc decoder/decoder.cc converter/audio_converter.cc converter/video_converter.cc renderer/video_renderer.cc renderer/audio_renderer.cc timer.cc)
 
-target_link_libraries(demuxer CONAN_PKG::ffmpeg CONAN_PKG::sdl2)
-target_link_libraries(decoder CONAN_PKG::ffmpeg CONAN_PKG::sdl2)
-target_link_libraries(converter CONAN_PKG::ffmpeg CONAN_PKG::sdl2)
-target_link_libraries(renderer CONAN_PKG::ffmpeg CONAN_PKG::sdl2)
-target_link_libraries(player CONAN_PKG::ffmpeg CONAN_PKG::sdl2)
+IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+set(LIBRARIES
+  CONAN_PKG::ffmpeg
+  CONAN_PKG::sdl2
+  wsock32
+  ws2_32
+  Secur32
+)
+ELSE()
+set(LIBRARIES
+  CONAN_PKG::ffmpeg
+  CONAN_PKG::sdl2
+)
+ENDIF()
+
+target_link_libraries(demuxer ${LIBRARIES})
+target_link_libraries(decoder ${LIBRARIES})
+target_link_libraries(converter ${LIBRARIES})
+target_link_libraries(renderer ${LIBRARIES})
+target_link_libraries(player ${LIBRARIES})

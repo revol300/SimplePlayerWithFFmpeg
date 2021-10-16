@@ -6,6 +6,7 @@ extern "C" {
 }
 
 #include <string>
+#include <memory>
 
 class Demuxer {
 public:

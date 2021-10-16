@@ -5,6 +5,8 @@
 
 using std::cout;
 using std::endl;
+using std::shared_ptr;
+using std::make_shared;
 
 int main(int argc, char* argv[]) {
   av_register_all(); //@NOTE: For FFmpeg version < 4.0

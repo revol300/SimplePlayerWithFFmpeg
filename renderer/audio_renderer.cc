@@ -2,7 +2,6 @@
 #include "../timer.h"
 
 #include <iostream>
-#include <unistd.h>
 
 using std::cout;
 using std::cerr;
@@ -87,7 +86,7 @@ bool AudioRenderer::init() {
   audio_wanted_spec_.userdata = this;
 
   SDL_AudioSpec hw_spec;
-  dev_ = SDL_OpenAudioDevice(NULL, 0, &audio_wanted_spec_, &hw_spec, SDL_AUDIO_ALLOW_FORMAT_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
+  dev_ = SDL_OpenAudioDevice(NULL, 0, &audio_wanted_spec_, &hw_spec, 0);
   if (dev_ == 0) {
     cerr << "open audio device failed!!" << endl;
     cerr << "Error : " << SDL_GetError() << endl;
