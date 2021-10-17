@@ -1,16 +1,16 @@
 #include <iostream>
 
-#include "decoder.h"
-#include "../demuxer/demuxer.h"
+#include "decoder/decoder.h"
+#include "demuxer/demuxer.h"
 
 using std::cout;
 using std::endl;
-using std::shared_ptr;
 using std::make_shared;
+using std::shared_ptr;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   av_register_all(); //@NOTE: For FFmpeg version < 4.0
-  if(argc < 2) {
+  if (argc < 2) {
     printf("usage : %s <input>\n", argv[0]);
     return 0;
   }
@@ -20,24 +20,26 @@ int main(int argc, char* argv[]) {
   auto video_index = demuxer->getVideoIndex();
   auto audio_index = demuxer->getAudioIndex();
   auto fmt_ctx = demuxer->getFormatContext();
-  std::shared_ptr<Decoder> video_decoder = make_shared<Decoder>(video_index, fmt_ctx);
-  std::shared_ptr<Decoder> audio_decoder = make_shared<Decoder>(audio_index, fmt_ctx);
+  std::shared_ptr<Decoder> video_decoder =
+      make_shared<Decoder>(video_index, fmt_ctx);
+  std::shared_ptr<Decoder> audio_decoder =
+      make_shared<Decoder>(audio_index, fmt_ctx);
   video_decoder->init();
   audio_decoder->init();
-  while(true) {
+  while (true) {
     std::shared_ptr<AVPacket> packet;
     demuxer->getPacket(packet);
-    if(packet.get() ) {
-      if(packet->stream_index == video_decoder->getIndex()) {
+    if (packet.get()) {
+      if (packet->stream_index == video_decoder->getIndex()) {
         std::shared_ptr<AVFrame> frame;
         video_decoder->getFrame(packet, frame);
-        if(frame.get()) {
+        if (frame.get()) {
           cout << "Got Video Frame! " << endl;
         }
-      } else if(packet->stream_index == audio_decoder->getIndex()) {
+      } else if (packet->stream_index == audio_decoder->getIndex()) {
         std::shared_ptr<AVFrame> frame;
         audio_decoder->getFrame(packet, frame);
-        if(frame.get()) {
+        if (frame.get()) {
           cout << "Got Audio Frame! " << endl;
         }
       }
