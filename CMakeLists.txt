@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Install git hooks
+execute_process(COMMAND /bin/sh -c "cd ${CMAKE_SOURCE_DIR}; git config core.hooksPath hooks")
+
 INCLUDE(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 

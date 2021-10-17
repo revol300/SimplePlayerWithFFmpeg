@@ -1,0 +1,59 @@
+#!/bin/sh
+
+# conflict인 경우 clang-format 적용하지 않음
+if grep "Conflicts" .git/MERGE_MSG > /dev/null 2>&1
+then
+    echo conflict occurred... skip hook
+    exit 0
+fi
+
+# 색 정의
+RED="\e[0;31m"
+END="\e[0m"
+
+# Do format checking (clang-format)
+C_CXX_format="\.([ch]|[chi](pp|xx)|(cc|hh|ii)|[CHI])$"
+for file in `git diff --name-only --cached --diff-filter=ACMR | grep -Ee "$C_CXX_format"`
+do
+  AUTOFORMATTER=`which clang-format`
+  if [ "$AUTOFORMATTER" = "" ]
+  then
+    echo -n "${RED}Cannot find clang-format ${END}\n"
+    exit 1
+  else
+    if $AUTOFORMATTER "$file" -style=Google -output-replacements-xml | grep -c "<replacement " > /dev/null
+    then
+      echo -n "\"$file\" is not formatted.\n"
+      $AUTOFORMATTER -i "$file"
+      git add "$file"
+      echo -n "Auto formatting applied: $AUTOFORMATTER\n"
+    fi
+  fi
+done
+
+LINTER=`which cpplint`
+if [ "$LINTER" = "" ]
+then
+  echo -n "${RED}Cannot find cpplint ${END}\n"
+  exit 1
+fi
+
+sum=0
+filters='-build/c++11,-whitespace/indent,-build/include_order,-whitespace/comments,-legal/copyright'
+
+# cpplint
+for file in `git diff --name-only --cached --diff-filter=ACMR | grep -Ee "$C_CXX_format"`
+do
+  $LINTER --filter=$filters $file
+  sum=$(expr ${sum} + $?)
+done
+
+if [ ${sum} -eq 0 ]; then
+  exit 0
+else
+  # Do default checking (trailing whitespace, etc.)
+  git diff --check --cached $against src
+  exit 1
+fi
+
+
