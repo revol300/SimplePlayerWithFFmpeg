@@ -2,6 +2,7 @@
 
 using std::cout;
 using std::endl;
+using std::lock_guard;
 using std::mutex;
 
 Timer::Timer()

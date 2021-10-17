@@ -1,10 +1,10 @@
-#ifndef SAFE_QUEUE
-#define SAFE_QUEUE
+#ifndef PLAYER_SAFE_QUEUE_H_
+#define PLAYER_SAFE_QUEUE_H_
 
+#include <memory>
 #include <queue>
 
-template<typename T>
-class SafeQueue {
+template <typename T> class SafeQueue {
 public:
   void push(std::shared_ptr<T> &in) {
     mutex_.lock();
@@ -15,7 +15,7 @@ public:
   std::shared_ptr<T> front() {
     std::shared_ptr<T> temp;
     mutex_.lock();
-    if(queue_.size() > 0) {
+    if (queue_.size() > 0) {
       temp = queue_.front();
       queue_.pop();
     } else {
@@ -25,18 +25,17 @@ public:
     return temp;
   }
 
-  int size() {
-    return queue_.size();
-  }
+  int size() { return queue_.size(); }
 
   void flush() {
     mutex_.lock();
-    queue_ = std::queue<std::shared_ptr<T> > ();
+    queue_ = std::queue<std::shared_ptr<T>>();
     mutex_.unlock();
   }
+
 private:
-  std::queue<std::shared_ptr<T> > queue_;
+  std::queue<std::shared_ptr<T>> queue_;
   std::mutex mutex_;
 };
 
-#endif // SAFE_QUEUE
+#endif // PLAYER_SAFE_QUEUE_H_

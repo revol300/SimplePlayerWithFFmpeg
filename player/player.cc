@@ -1,26 +1,26 @@
+#include <chrono>
 #include <iostream>
 #include <memory>
-#include <chrono>
 #include <mutex>
 
-#define MAX_SIZE 40 
-#define MIN_SIZE 20 
+#define MAX_SIZE 40
+#define MIN_SIZE 20
 
 extern "C" {
-  #include <SDL.h>
+#include <SDL.h>
 }
 #include <atomic>
 #include <future>
 
-#include "../renderer/video_renderer.h"
-#include "../renderer/audio_renderer.h"
-#include "../converter/audio_converter.h"
-#include "../converter/video_converter.h"
-#include "../decoder/decoder.h"
-#include "../demuxer/demuxer.h"
-#include "../timer.h"
+#include "converter/audio_converter.h"
+#include "converter/video_converter.h"
+#include "decoder/decoder.h"
+#include "demuxer/demuxer.h"
+#include "renderer/audio_renderer.h"
+#include "renderer/video_renderer.h"
+#include "timer/timer.h"
 
-#include "safe_queue.h"
+#include "player/safe_queue.h"
 
 using std::cout;
 using std::endl;
@@ -34,9 +34,11 @@ SafeQueue<AVFrame> audio_converter_queue;
 SafeQueue<AVFrame> video_renderer_queue;
 SafeQueue<AudioFrame> audio_renderer_queue;
 
-Uint32 SDL_DEMUX, SDL_VIDEO_DECODE, SDL_AUDIO_DECODE, SDL_VIDEO_CONVERT, SDL_AUDIO_CONVERT, SDL_VIDEO_RENDER, SDL_AUDIO_RENDER, SDL_DEMUX_END;
+Uint32 SDL_DEMUX, SDL_VIDEO_DECODE, SDL_AUDIO_DECODE, SDL_VIDEO_CONVERT,
+    SDL_AUDIO_CONVERT, SDL_VIDEO_RENDER, SDL_AUDIO_RENDER, SDL_DEMUX_END;
 
-std::mutex demux_lock, v_decode_lock, a_decode_lock, v_convert_lock, a_convert_lock, v_render_lock, a_render_lock;
+std::mutex demux_lock, v_decode_lock, a_decode_lock, v_convert_lock,
+    a_convert_lock, v_render_lock, a_render_lock;
 
 std::atomic<int> demuxer_job_count(0);
 
@@ -53,19 +55,19 @@ void demuxing(std::shared_ptr<Demuxer> demuxer) {
   std::lock_guard<std::mutex> lock_guard(demux_lock);
   std::shared_ptr<AVPacket> packet;
   auto result = demuxer->getPacket(packet);
-  if(packet.get()) {
+  if (packet.get()) {
     SDL_Event decode_event;
-    if(packet->stream_index == demuxer->getVideoIndex()) {
+    if (packet->stream_index == demuxer->getVideoIndex()) {
       video_decoder_queue.push(packet);
       decode_event.type = SDL_VIDEO_DECODE;
-    } else if(packet->stream_index == demuxer->getAudioIndex()) {
+    } else if (packet->stream_index == demuxer->getAudioIndex()) {
       audio_decoder_queue.push(packet);
       decode_event.type = SDL_AUDIO_DECODE;
     }
     SDL_PushEvent(&decode_event);
   }
 
-  if(!result) {
+  if (!result) {
     SDL_Event end_event;
     end_event.type = SDL_DEMUX_END;
     SDL_PushEvent(&end_event);
@@ -76,10 +78,10 @@ void demuxing(std::shared_ptr<Demuxer> demuxer) {
 void video_decoding(std::shared_ptr<Decoder> decoder) {
   std::lock_guard<std::mutex> lock_guard(v_decode_lock);
   std::shared_ptr<AVPacket> packet = video_decoder_queue.front();
-  if(packet.get()) {
+  if (packet.get()) {
     std::shared_ptr<AVFrame> frame;
     decoder->getFrame(packet, frame);
-    if(frame.get()) {
+    if (frame.get()) {
       video_converter_queue.push(frame);
       SDL_Event convert_event;
       convert_event.type = SDL_VIDEO_CONVERT;
@@ -91,10 +93,10 @@ void video_decoding(std::shared_ptr<Decoder> decoder) {
 void audio_decoding(std::shared_ptr<Decoder> decoder) {
   std::lock_guard<std::mutex> lock_guard(a_decode_lock);
   std::shared_ptr<AVPacket> packet = audio_decoder_queue.front();
-  if(packet.get()) {
+  if (packet.get()) {
     std::shared_ptr<AVFrame> frame;
     decoder->getFrame(packet, frame);
-    if(frame.get()) {
+    if (frame.get()) {
       audio_converter_queue.push(frame);
       SDL_Event convert_event;
       convert_event.type = SDL_AUDIO_CONVERT;
@@ -106,7 +108,7 @@ void audio_decoding(std::shared_ptr<Decoder> decoder) {
 void video_converting(std::shared_ptr<VideoConverter> video_converter) {
   std::lock_guard<std::mutex> lock_guard(v_convert_lock);
   std::shared_ptr<AVFrame> frame = video_converter_queue.front();
-  if(frame.get()) {
+  if (frame.get()) {
     std::shared_ptr<AVFrame> converted_frame;
     video_converter->getFrame(frame, converted_frame);
     video_renderer_queue.push(converted_frame);
@@ -119,7 +121,7 @@ void video_converting(std::shared_ptr<VideoConverter> video_converter) {
 void audio_converting(std::shared_ptr<AudioConverter> audio_converter) {
   std::lock_guard<std::mutex> lock_guard(a_convert_lock);
   std::shared_ptr<AVFrame> frame = audio_converter_queue.front();
-  if(frame.get()) {
+  if (frame.get()) {
     std::shared_ptr<AudioFrame> converted_frame;
     audio_converter->getFrame(frame.get(), converted_frame);
     audio_renderer_queue.push(converted_frame);
@@ -132,7 +134,7 @@ void audio_converting(std::shared_ptr<AudioConverter> audio_converter) {
 void video_rendering(std::shared_ptr<VideoRenderer> renderer) {
   std::lock_guard<std::mutex> lock_guard(v_render_lock);
   std::shared_ptr<AVFrame> frame = video_renderer_queue.front();
-  if(frame.get()) {
+  if (frame.get()) {
     renderer->getFrame(frame);
   }
 }
@@ -140,15 +142,14 @@ void video_rendering(std::shared_ptr<VideoRenderer> renderer) {
 void audio_rendering(std::shared_ptr<AudioRenderer> renderer) {
   std::lock_guard<std::mutex> lock_guard(a_render_lock);
   std::shared_ptr<AudioFrame> frame = audio_renderer_queue.front();
-  if(frame.get()) {
+  if (frame.get()) {
     renderer->getFrame(frame);
   }
 }
 
-int main(int argc, char* argv[]) {
-  
+int main(int argc, char *argv[]) {
   av_register_all(); //@NOTE: For FFmpeg version < 4.0
-  if(argc < 2) {
+  if (argc < 2) {
     printf("usage : %s <input>\n", argv[0]);
     return 0;
   }
@@ -158,8 +159,10 @@ int main(int argc, char* argv[]) {
   auto video_index = demuxer->getVideoIndex();
   auto audio_index = demuxer->getAudioIndex();
   auto fmt_ctx = demuxer->getFormatContext();
-  std::shared_ptr<Decoder> video_decoder = make_shared<Decoder>(video_index, fmt_ctx);
-  std::shared_ptr<Decoder> audio_decoder = make_shared<Decoder>(audio_index, fmt_ctx);
+  std::shared_ptr<Decoder> video_decoder =
+      make_shared<Decoder>(video_index, fmt_ctx);
+  std::shared_ptr<Decoder> audio_decoder =
+      make_shared<Decoder>(audio_index, fmt_ctx);
   video_decoder->init();
   audio_decoder->init();
 
@@ -168,15 +171,19 @@ int main(int argc, char* argv[]) {
   std::shared_ptr<AVCodecContext> video_codec_context;
   video_decoder->getCodecContext(video_codec_context);
 
-  std::shared_ptr<AudioConverter> audio_converter = make_shared<AudioConverter>(audio_codec_context);
+  std::shared_ptr<AudioConverter> audio_converter =
+      make_shared<AudioConverter>(audio_codec_context);
   audio_converter->init();
-  std::shared_ptr<VideoConverter> video_converter = make_shared<VideoConverter>(video_codec_context);
+  std::shared_ptr<VideoConverter> video_converter =
+      make_shared<VideoConverter>(video_codec_context);
   video_converter->init();
 
-  std::shared_ptr<VideoRenderer> video_renderer = make_shared<VideoRenderer>(video_codec_context, fmt_ctx->streams[video_index]->time_base);
+  std::shared_ptr<VideoRenderer> video_renderer = make_shared<VideoRenderer>(
+      video_codec_context, fmt_ctx->streams[video_index]->time_base);
   video_renderer->init();
 
-  std::shared_ptr<AudioRenderer> audio_renderer = make_shared<AudioRenderer>(audio_codec_context, fmt_ctx->streams[audio_index]->time_base);
+  std::shared_ptr<AudioRenderer> audio_renderer = make_shared<AudioRenderer>(
+      audio_codec_context, fmt_ctx->streams[audio_index]->time_base);
   audio_renderer->init();
 
   SDL_Event event;
@@ -193,53 +200,52 @@ int main(int argc, char* argv[]) {
 
   bool demux_done = false;
   bool running = true;
-  while(true) {
+  while (true) {
     SDL_PollEvent(&event);
 
     if (event.type == SDL_KEYDOWN) {
       switch (event.key.keysym.sym) {
-        case SDLK_p:
-        case SDLK_SPACE:
-          running = !running;
-          if(running) {
-            video_renderer->start();
-            audio_renderer->start();
-          } else {
-            video_renderer->stop();
-            audio_renderer->stop();
-          }
-          break;
-        case SDLK_LEFT:
-          flushQueue();
-          for (int i = 0; i < job_queue.size(); i++) {
-            job_queue[i].get();
-          }
-          job_queue.clear();
-          video_renderer->flush();
-          audio_renderer->flush();
-          video_decoder->flush();
-          audio_decoder->flush();
-          SDL_PumpEvents();
-          demuxer_job_count=0;
-          demuxer->seek(Timer::getInstance()->getAudioTime() - (10 * 1000));
-          break;
-        case SDLK_RIGHT:
-          flushQueue();
-          for (int i = 0; i < job_queue.size(); i++) {
-            job_queue[i].get();
-          }
-          job_queue.clear();
-          video_renderer->flush();
-          audio_renderer->flush();
-          video_decoder->flush();
-          audio_decoder->flush();
-          SDL_PumpEvents();
-          demuxer_job_count=0;
-          demuxer->seek(Timer::getInstance()->getAudioTime() + (10 * 1000));
-          break;
+      case SDLK_p:
+      case SDLK_SPACE:
+        running = !running;
+        if (running) {
+          video_renderer->start();
+          audio_renderer->start();
+        } else {
+          video_renderer->stop();
+          audio_renderer->stop();
+        }
+        break;
+      case SDLK_LEFT:
+        flushQueue();
+        for (int i = 0; i < job_queue.size(); i++) {
+          job_queue[i].get();
+        }
+        job_queue.clear();
+        video_renderer->flush();
+        audio_renderer->flush();
+        video_decoder->flush();
+        audio_decoder->flush();
+        SDL_PumpEvents();
+        demuxer_job_count = 0;
+        demuxer->seek(Timer::getInstance()->getAudioTime() - (10 * 1000));
+        break;
+      case SDLK_RIGHT:
+        flushQueue();
+        for (int i = 0; i < job_queue.size(); i++) {
+          job_queue[i].get();
+        }
+        job_queue.clear();
+        video_renderer->flush();
+        audio_renderer->flush();
+        video_decoder->flush();
+        audio_decoder->flush();
+        SDL_PumpEvents();
+        demuxer_job_count = 0;
+        demuxer->seek(Timer::getInstance()->getAudioTime() + (10 * 1000));
+        break;
       }
     }
-
 
     if (event.type == SDL_QUIT) {
       video_renderer->quit();
@@ -249,17 +255,23 @@ int main(int argc, char* argv[]) {
     } else if (event.type == SDL_DEMUX) {
       job_queue.push_back(std::async(std::launch::async, demuxing, demuxer));
     } else if (event.type == SDL_VIDEO_DECODE) {
-      job_queue.push_back(std::async(std::launch::async, video_decoding, video_decoder));
+      job_queue.push_back(
+          std::async(std::launch::async, video_decoding, video_decoder));
     } else if (event.type == SDL_AUDIO_DECODE) {
-      job_queue.push_back(std::async(std::launch::async, audio_decoding, audio_decoder));
+      job_queue.push_back(
+          std::async(std::launch::async, audio_decoding, audio_decoder));
     } else if (event.type == SDL_VIDEO_CONVERT) {
-      job_queue.push_back(std::async(std::launch::async, video_converting, video_converter));
+      job_queue.push_back(
+          std::async(std::launch::async, video_converting, video_converter));
     } else if (event.type == SDL_AUDIO_CONVERT) {
-      job_queue.push_back(std::async(std::launch::async, audio_converting, audio_converter));
+      job_queue.push_back(
+          std::async(std::launch::async, audio_converting, audio_converter));
     } else if (event.type == SDL_VIDEO_RENDER) {
-      job_queue.push_back(std::async(std::launch::async, video_rendering, video_renderer));
+      job_queue.push_back(
+          std::async(std::launch::async, video_rendering, video_renderer));
     } else if (event.type == SDL_AUDIO_RENDER) {
-      job_queue.push_back(std::async(std::launch::async, audio_rendering, audio_renderer));
+      job_queue.push_back(
+          std::async(std::launch::async, audio_rendering, audio_renderer));
     } else if (event.type == SDL_DEMUX_END) {
       demux_done = true;
     }
@@ -268,18 +280,19 @@ int main(int argc, char* argv[]) {
 
     for (int i = 0; i < job_queue.size(); i++) {
       auto status = job_queue[i].wait_for(std::chrono::milliseconds(10));
-      if(status == std::future_status::ready) {
+      if (status == std::future_status::ready) {
         job_done.push_back(i);
       }
     }
 
-    for (int j=job_done.size()-1; j >=0; j--) {
+    for (int j = job_done.size() - 1; j >= 0; j--) {
       job_queue.erase(job_queue.begin() + job_done[j]);
     }
 
     if (!demux_done && running) {
-      if(video_renderer_queue.size() < MIN_SIZE || audio_renderer_queue.size() < MIN_SIZE) {
-        if(demuxer_job_count < 20) {
+      if (video_renderer_queue.size() < MIN_SIZE ||
+          audio_renderer_queue.size() < MIN_SIZE) {
+        if (demuxer_job_count < 20) {
           SDL_Event demux_event;
           demux_event.type = SDL_DEMUX;
           demuxer_job_count++;
