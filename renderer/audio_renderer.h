@@ -1,9 +1,9 @@
-#ifndef AUDIO_RENDERER
-#define AUDIO_RENDERER
+#ifndef RENDERER_AUDIO_RENDERER_H_
+#define RENDERER_AUDIO_RENDERER_H_
 
 extern "C" {
-  #include <libavformat/avformat.h>
-  #include <SDL.h>
+#include <SDL.h>
+#include <libavformat/avformat.h>
 }
 
 #include <memory>
@@ -12,34 +12,32 @@ extern "C" {
 
 #include "../converter/audio_struct.h"
 
-static void audio_callback(void *userdata, Uint8 * stream, int len);
+static void audio_callback(void *userdata, Uint8 *stream, int len);
 
 class AudioRenderer {
 public:
-  AudioRenderer(std::shared_ptr<AVCodecContext>& audio_codec_context, AVRational time_base);
+  AudioRenderer(std::shared_ptr<AVCodecContext> &audio_codec_context,
+                AVRational time_base);
   ~AudioRenderer();
   bool init();
-  int getFrame(std::shared_ptr<AudioFrame>& in);
+  int getFrame(std::shared_ptr<AudioFrame> &in);
   int getAudioData(uint8_t *audio_buf, int buf_size);
-  std::queue<std::shared_ptr<AudioFrame> > frame_queue_;
-  uint64_t getAudioTime() {return audio_clock_;};
+  std::queue<std::shared_ptr<AudioFrame>> frame_queue_;
+  uint64_t getAudioTime() { return audio_clock_; }
   uint64_t bytesToMilisecond(uint32_t len) {
-    return (len*1000)/audio_hw_params_.bytes_per_sec;
+    return (len * 1000) / audio_hw_params_.bytes_per_sec;
   }
-  void stop() {
-    SDL_PauseAudioDevice(dev_, 1);
-  }
-  void start() {
-    SDL_PauseAudioDevice(dev_, 0);
-  }
+  void stop() { SDL_PauseAudioDevice(dev_, 1); }
+  void start() { SDL_PauseAudioDevice(dev_, 0); }
 
   void flush() {
     stop();
     lk_.lock();
-    frame_queue_ = std::queue<std::shared_ptr<AudioFrame> > ();
+    frame_queue_ = std::queue<std::shared_ptr<AudioFrame>>();
     lk_.unlock();
     start();
   }
+
 private:
   int64_t audio_clock_;
   AVRational time_base_;
@@ -49,4 +47,4 @@ private:
   int dev_;
 };
 
-#endif //VIDEO_RENDERER
+#endif // RENDERER_AUDIO_RENDERER_H_

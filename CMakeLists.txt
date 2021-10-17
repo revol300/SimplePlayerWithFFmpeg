@@ -21,8 +21,8 @@ include_directories(
 add_executable(demuxer demuxer/demuxer_test.cc demuxer/demuxer.cc)
 add_executable(decoder decoder/decoder_test.cc demuxer/demuxer.cc decoder/decoder.cc)
 add_executable(converter converter/converter_test.cc demuxer/demuxer.cc decoder/decoder.cc converter/audio_converter.cc converter/video_converter.cc)
-add_executable(renderer renderer/renderer_test.cc demuxer/demuxer.cc decoder/decoder.cc converter/audio_converter.cc converter/video_converter.cc renderer/video_renderer.cc renderer/audio_renderer.cc timer.cc)
-add_executable(player player/player.cc demuxer/demuxer.cc decoder/decoder.cc converter/audio_converter.cc converter/video_converter.cc renderer/video_renderer.cc renderer/audio_renderer.cc timer.cc)
+add_executable(renderer renderer/renderer_test.cc demuxer/demuxer.cc decoder/decoder.cc converter/audio_converter.cc converter/video_converter.cc renderer/video_renderer.cc renderer/audio_renderer.cc timer/timer.cc)
+add_executable(player player/player.cc demuxer/demuxer.cc decoder/decoder.cc converter/audio_converter.cc converter/video_converter.cc renderer/video_renderer.cc renderer/audio_renderer.cc timer/timer.cc)
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 set(LIBRARIES
