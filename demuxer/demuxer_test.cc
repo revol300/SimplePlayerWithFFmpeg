@@ -1,4 +1,4 @@
-#include "demuxer.h"
+#include "demuxer/demuxer.h"
 
 #include <iostream>
 #include <memory>
@@ -7,9 +7,9 @@ using std::cout;
 using std::endl;
 using std::make_shared;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   av_register_all(); //@NOTE: For FFmpeg version < 4.0
-  if(argc < 2) {
+  if (argc < 2) {
     printf("usage : %s <input>\n", argv[0]);
     return 0;
   }

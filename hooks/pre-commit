@@ -39,7 +39,7 @@ then
 fi
 
 sum=0
-filters='-build/c++11,-whitespace/indent,-build/include_order,-whitespace/comments,-legal/copyright'
+filters='-build/c++17,-whitespace/indent,-build/include_order,-whitespace/comments,-legal/copyright,-runtime/references'
 
 # cpplint
 for file in `git diff --name-only --cached --diff-filter=ACMR | grep -Ee "$C_CXX_format"`
