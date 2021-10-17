@@ -73,25 +73,23 @@ void Demuxer::seek(int64_t time) {
   int64_t seek_max = INT64_MAX;
   auto ret = avformat_seek_file(fmt_ctx_.get(), -1, seek_min, seek_target,
                                 seek_max, AVSEEK_FLAG_FRAME);
-  if (ret < 0) {
-    std::cout << "error occured ! " << std::endl;
-  }
-
-  /*
-     fmt_ctx_.reset();
-     init();
-     while(true) {
-     std::shared_ptr<AVPacket> packet;
-     getPacket(packet);
-     if(packet.get()){
-     int64_t pts_time =
-     av_q2d(fmt_ctx_->streams[video_index_]->time_base)*packet->pts*1000;
-//@NOTE : sample.mkv 파일의 경우 video_stream은
-AV_PKT_FLAG_KEY조회가 불가 if(abs(pts_time-time) < 100 && packet->flags ==
-AV_PKT_FLAG_KEY) { break;
-}
-} else {
-return;
-}
-}*/
+  /* if (ret < 0) {
+   *   std::cout << "cannot find the moov box" << std::endl;
+   *   fmt_ctx_.reset();
+   *   init();
+   *   while (true) {
+   *     std::shared_ptr<AVPacket> packet;
+   *     getPacket(packet);
+   *     if (packet.get()) {
+   *       int64_t pts_time = av_q2d(fmt_ctx_->streams[video_index_]->time_base)
+   * * packet->pts * 1000;
+   *       // @NOTE : sample.mkv 파일의 경우 video_stream은
+   * AV_PKT_FLAG_KEY조회가 불가 if (abs(pts_time - time) < 100 && packet->flags
+   * == AV_PKT_FLAG_KEY) { break;
+   *       }
+   *     } else {
+   *       return;
+   *     }
+   *   }
+   * } */
 }

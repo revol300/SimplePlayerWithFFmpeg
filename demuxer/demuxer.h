@@ -17,7 +17,7 @@ public:
   int getVideoIndex() { return video_index_; }
   int getAudioIndex() { return audio_index_; }
   std::shared_ptr<AVFormatContext> &getFormatContext() { return fmt_ctx_; }
-  // microseconds
+  // @NOTE: time_unit ==  microseconds
   void seek(int64_t time);
 
 private:
