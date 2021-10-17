@@ -14,11 +14,9 @@ INCLUDE(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 
 include_directories(
-	${PROJECT_SOURCE_DIR}/demuxer
-	${PROJECT_SOURCE_DIR}/decoder
-	${PROJECT_SOURCE_DIR}/converter
-	${PROJECT_SOURCE_DIR}/renderer
+  ${PROJECT_SOURCE_DIR}
 )
+
 
 add_executable(demuxer demuxer/demuxer_test.cc demuxer/demuxer.cc)
 add_executable(decoder decoder/decoder_test.cc demuxer/demuxer.cc decoder/decoder.cc)

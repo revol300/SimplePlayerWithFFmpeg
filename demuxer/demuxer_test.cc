@@ -1,7 +1,7 @@
-#include "demuxer/demuxer.h"
-
 #include <iostream>
 #include <memory>
+
+#include "demuxer/demuxer.h"
 
 using std::cout;
 using std::endl;
