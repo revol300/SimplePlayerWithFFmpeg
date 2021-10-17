@@ -1,5 +1,5 @@
-#ifndef AUDIO_STRUCT
-#define AUDIO_STRUCT
+#ifndef CONVERTER_AUDIO_STRUCT_H_
+#define CONVERTER_AUDIO_STRUCT_H_
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -15,9 +15,9 @@ typedef struct AudioParams {
 } AudioParams;
 
 typedef struct AudioFrame {
-  uint8_t* data;
+  uint8_t *data;
   unsigned int size;
   int64_t pts;
 } AudioFrame;
 
-#endif // AUDIO_STRUCT
+#endif // CONVERTER_AUDIO_STRUCT_H_
