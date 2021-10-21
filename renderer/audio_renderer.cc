@@ -28,6 +28,7 @@ static void audio_callback(void *userdata, Uint8 *stream, int len) {
     if (audio_buf_index >= audio_buf_size) {
       audio_size = audio_renderer->getAudioData(audio_buf, sizeof(audio_buf));
       if (audio_size < 0) {
+        memset(audio_buf, 0, (MAX_AUDIO_FRAME_SIZE * 3) / 2);
         // cout << "audio size is minus" << endl;
         /* if error, just output silence */
         audio_buf_size = 1024;

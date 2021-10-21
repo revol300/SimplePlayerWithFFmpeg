@@ -34,6 +34,7 @@ public:
     stop();
     lk_.lock();
     frame_queue_ = std::queue<std::shared_ptr<AudioFrame>>();
+    SDL_ClearQueuedAudio(dev_);
     lk_.unlock();
     start();
   }

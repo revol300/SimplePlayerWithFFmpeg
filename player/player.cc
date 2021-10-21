@@ -228,7 +228,9 @@ int main(int argc, char *argv[]) {
         audio_decoder->flush();
         SDL_PumpEvents();
         demuxer_job_count = 0;
-        demuxer->seek(Timer::getInstance()->getAudioTime() - (10 * 1000));
+        Timer::getInstance()->setAudioTime(
+            Timer::getInstance()->getAudioTime() - (10 * 1000));
+        demuxer->seek(Timer::getInstance()->getAudioTime());
         break;
       case SDLK_RIGHT:
         flushQueue();
@@ -242,7 +244,9 @@ int main(int argc, char *argv[]) {
         audio_decoder->flush();
         SDL_PumpEvents();
         demuxer_job_count = 0;
-        demuxer->seek(Timer::getInstance()->getAudioTime() + (10 * 1000));
+        Timer::getInstance()->setAudioTime(
+            Timer::getInstance()->getAudioTime() + (10 * 1000));
+        demuxer->seek(Timer::getInstance()->getAudioTime());
         break;
       }
     }

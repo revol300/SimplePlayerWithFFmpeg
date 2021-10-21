@@ -1,13 +1,12 @@
 # SimplePlayerWithFFmpeg&SDL
 
-이 프로젝트는 ffmpeg과 sdl로 간단한 플레이어를 만들어보고자 만들었습니다.
+이 프로젝트는 ffmpeg과 sdl2로 간단한 플레이어를 만들어보고자 만들었습니다.
 
-## Build
-
+## How to build
 ### Windows (64bit)
 #### 요구 사항
 - Git : [https://git-scm.com/download/win](https://git-scm.com/download/win)
-- Conan : https://conan.io/downloads.html
+- Conan : [https://conan.io/downloads.html](https://conan.io/downloads.html)
 - Visual studio build tool [https://aka.ms/vs/16/release/vs_buildtools.exe](https://aka.ms/vs/16/release/vs_buildtools.exe)
 
 #### 설치 방법
@@ -22,7 +21,25 @@ conan remote add bincrafters https://bincrafters.jfrog.io/artifactory/api/conan/
 conan config set general.revisions_enabled=1
 conan profile new playerProfile --detect
 conan profile update settings.build_type=Debug playerProfile
+./visual_studio_build.sh
 ```
+- 프로젝트 내에 생성된 VisualStudio 폴더를 Visual Studio로 연다.
 
-### Mac
-### Linux
+### Mac && Linux
+#### 요구 사항
+- Conan : [https://docs.conan.io/en/latest/installation.html](https://docs.conan.io/en/latest/installation.html)
+```bash
+pip install conan
+```
+** python3의 pip 사용을 권장 **
+
+- 다음 스크립트 실행
+```bash
+./build.sh
+```
+- 프로젝트 내의  build/bin에 실행파일이 생성됨
+- Xcode 프로젝트 생성을 원할 시 다음 스크립트 실행
+```bash
+./xcode_build.sh
+```
+- Xcode 폴더에 Xcode 프로젝트 생성됨 
