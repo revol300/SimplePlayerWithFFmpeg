@@ -1,9 +1,0 @@
-- GIT BASH
-- visual studio build tool download
-- install conan
-- set path env (ex: lc.exe, cl.exe link.exe)
-- set conan profile
-- conan remote add bincrafters https://bincrafters.jfrog.io/artifactory/api/conan/public-conan
-- conan config set general.revisions_enabled=1
-- conan profile new playerProfile --detect
-- conan profile update settings.build_type=Debug playerProfile
