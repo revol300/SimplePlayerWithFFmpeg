@@ -31,15 +31,17 @@ int main(int argc, char *argv[]) {
     demuxer->getPacket(packet);
     if (packet.get()) {
       if (packet->stream_index == video_decoder->getIndex()) {
-        std::shared_ptr<AVFrame> frame;
-        video_decoder->getFrame(packet, frame);
-        if (frame.get()) {
+        std::vector<std::shared_ptr<AVFrame>> frame_list;
+        video_decoder->getFrame(packet, frame_list);
+        while (frame_list.size() > 0) {
+          frame_list.erase(frame_list.begin());
           cout << "Got Video Frame! " << endl;
         }
       } else if (packet->stream_index == audio_decoder->getIndex()) {
-        std::shared_ptr<AVFrame> frame;
-        audio_decoder->getFrame(packet, frame);
-        if (frame.get()) {
+        std::vector<std::shared_ptr<AVFrame>> frame_list;
+        audio_decoder->getFrame(packet, frame_list);
+        while (frame_list.size() > 0) {
+          frame_list.erase(frame_list.begin());
           cout << "Got Audio Frame! " << endl;
         }
       }
