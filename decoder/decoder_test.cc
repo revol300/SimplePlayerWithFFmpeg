@@ -33,6 +33,7 @@ int main(int argc, char *argv[]) {
       if (packet->stream_index == video_decoder->getIndex()) {
         std::vector<std::shared_ptr<AVFrame>> frame_list;
         video_decoder->getFrame(packet, frame_list);
+        cout << "Video Frame Count : " << frame_list.size() << endl;
         while (frame_list.size() > 0) {
           frame_list.erase(frame_list.begin());
           cout << "Got Video Frame! " << endl;

@@ -14,8 +14,6 @@ public:
   ~Decoder();
   void init();
   bool getFrame(std::shared_ptr<AVPacket> &packet,
-                std::shared_ptr<AVFrame> &frame);
-  bool getFrame(std::shared_ptr<AVPacket> &packet,
                 std::vector<std::shared_ptr<AVFrame>> &frame_list);
   int getIndex() { return stream_index_; }
   void getCodecContext(std::shared_ptr<AVCodecContext> &codec_context) {

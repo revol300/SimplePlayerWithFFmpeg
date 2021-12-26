@@ -79,10 +79,12 @@ void video_decoding(std::shared_ptr<Decoder> decoder) {
   std::lock_guard<std::mutex> lock_guard(v_decode_lock);
   std::shared_ptr<AVPacket> packet = video_decoder_queue.front();
   if (packet.get()) {
-    std::shared_ptr<AVFrame> frame;
-    decoder->getFrame(packet, frame);
-    if (frame.get()) {
+    std::vector<std::shared_ptr<AVFrame>> frame_list;
+    decoder->getFrame(packet, frame_list);
+    while (frame_list.size() > 0) {
+      std::shared_ptr<AVFrame> frame = frame_list.front();
       video_converter_queue.push(frame);
+      frame_list.erase(frame_list.begin());
       SDL_Event convert_event;
       convert_event.type = SDL_VIDEO_CONVERT;
       SDL_PushEvent(&convert_event);
@@ -94,10 +96,12 @@ void audio_decoding(std::shared_ptr<Decoder> decoder) {
   std::lock_guard<std::mutex> lock_guard(a_decode_lock);
   std::shared_ptr<AVPacket> packet = audio_decoder_queue.front();
   if (packet.get()) {
-    std::shared_ptr<AVFrame> frame;
-    decoder->getFrame(packet, frame);
-    if (frame.get()) {
+    std::vector<std::shared_ptr<AVFrame>> frame_list;
+    decoder->getFrame(packet, frame_list);
+    while (frame_list.size() > 0) {
+      std::shared_ptr<AVFrame> frame = frame_list.front();
       audio_converter_queue.push(frame);
+      frame_list.erase(frame_list.begin());
       SDL_Event convert_event;
       convert_event.type = SDL_AUDIO_CONVERT;
       SDL_PushEvent(&convert_event);

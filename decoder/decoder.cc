@@ -39,25 +39,6 @@ void Decoder::init() {
 }
 
 bool Decoder::getFrame(std::shared_ptr<AVPacket> &packet,
-                       std::shared_ptr<AVFrame> &frame) {
-  frame = std::shared_ptr<AVFrame>(nullptr);
-  auto used = avcodec_send_packet(codec_context_.get(), packet.get());
-  if (!(used < 0 && used != AVERROR(EAGAIN) && used != AVERROR_EOF)) {
-    AVFrame *pFrame = av_frame_alloc();
-    used = avcodec_receive_frame(codec_context_.get(), pFrame);
-    if (used >= 0) {
-      frame = std::shared_ptr<AVFrame>(pFrame, [](AVFrame *pFrame) {
-        std::cout << "av_frame_free : " << pFrame << std::endl;
-        av_frame_free(&pFrame);
-      });
-    } else {
-      av_frame_free(&pFrame);
-    }
-  }
-  return true;
-}
-
-bool Decoder::getFrame(std::shared_ptr<AVPacket> &packet,
                        std::vector<std::shared_ptr<AVFrame>> &frame_list) {
   frame_list.clear();
   auto used = avcodec_send_packet(codec_context_.get(), packet.get());
