@@ -23,7 +23,6 @@ public:
 private:
   int stream_index_;
   std::shared_ptr<AVCodecContext> codec_context_;
-  std::shared_ptr<AVFrame> pFrame;
   std::shared_ptr<AVFormatContext> fmt_ctx_;
 };
 

@@ -6,8 +6,7 @@ using std::cout;
 using std::endl;
 
 Decoder::Decoder(int stream_index, std::shared_ptr<AVFormatContext> &fmt_ctx)
-    : stream_index_(stream_index), fmt_ctx_(fmt_ctx), codec_context_(),
-      pFrame(nullptr) {}
+    : stream_index_(stream_index), fmt_ctx_(fmt_ctx), codec_context_() {}
 
 Decoder::~Decoder() {}
 
