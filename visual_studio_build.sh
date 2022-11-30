@@ -4,5 +4,5 @@ echo ${PROJECT_PATH}
 mkdir -p ${PROJECT_PATH}/VisualStudio
 pushd VisualStudio
   conan install ${PROJECT_PATH}/conan/conanfile.txt -pr=playerProfile --build=missing --update
-  cmake -G "Visual Studio 16 2019" ../
+  cmake ../
 popd

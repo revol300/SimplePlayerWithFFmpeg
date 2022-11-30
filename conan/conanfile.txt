@@ -1,6 +1,7 @@
 [requires]
-ffmpeg/[>=4.3.2]
-sdl2/[>=2.0.9]@bincrafters/stable
+ffmpeg/4.3.2
+sdl2/[>=2.0.16]@bincrafters/stable
+libiconv/1.16
 [options]
 ffmpeg:with_ssl=False
 ffmpeg:with_libmp3lame=False

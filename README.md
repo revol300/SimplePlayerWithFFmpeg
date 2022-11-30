@@ -6,22 +6,23 @@
 ### Windows (64bit)
 #### 요구 사항
 - Git : [https://git-scm.com/download/win](https://git-scm.com/download/win)
+- Cmake: [https://cmake.org/download/](https://cmake.org/download/)
 - Conan : [https://conan.io/downloads.html](https://conan.io/downloads.html)
-- Visual studio build tool [https://aka.ms/vs/16/release/vs_buildtools.exe](https://aka.ms/vs/16/release/vs_buildtools.exe)
+- Visual studio [https://visualstudio.microsoft.com/ko/](https://visualstudio.microsoft.com/ko/)
 
 #### 설치 방법
-- Git, Conan, Visual studio build tool을 설치한다
-- visual studio command prompt를 실행
-- which cl, which link를 통해서 PATH를 검색
+- Git, Cmake, Conan, Visual studio를 설치한다
+- Developer Command Prompt를 실행
+- where cl, where link를 통해서 PATH를 검색
 - 해당 PATH를 환경변수에 추가
-- Git Bash 실행
+- Windows PowerShell 실행
 - 다음 스크립트 실행
-```bash
+```
 conan remote add bincrafters https://bincrafters.jfrog.io/artifactory/api/conan/public-conan
 conan config set general.revisions_enabled=1
 conan profile new playerProfile --detect
 conan profile update settings.build_type=Debug playerProfile
-./visual_studio_build.sh
+.\visual_studio_build.bat
 ```
 - 프로젝트 내에 생성된 VisualStudio 폴더를 Visual Studio로 연다.
 
