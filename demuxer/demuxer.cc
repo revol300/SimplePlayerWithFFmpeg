@@ -23,7 +23,9 @@ int Demuxer::init() {
     //@NOTE error_code needed
     return -1;
   }
-  fmt_ctx_ = std::shared_ptr<AVFormatContext>(fmt_ctx);
+  fmt_ctx_ = std::shared_ptr<AVFormatContext>(fmt_ctx, [](AVFormatContext* fmt_ctx) {
+      avformat_close_input(&fmt_ctx);
+  });
   ret = avformat_find_stream_info(fmt_ctx_.get(), NULL);
   if (ret < 0) {
     cout << "Failed to retrieve input stream information : " << endl;

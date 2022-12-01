@@ -24,6 +24,7 @@ extern "C" {
 
 using std::cout;
 using std::endl;
+using std::make_shared;
 
 SafeQueue<AVPacket> video_decoder_queue;
 SafeQueue<AVPacket> audio_decoder_queue;
@@ -158,13 +159,13 @@ int main(int argc, char *argv[]) {
     return 0;
   }
   std::string file_path = argv[1];
-  std::shared_ptr<Demuxer> demuxer = make_shared<Demuxer>(file_path);
+  std::shared_ptr<Demuxer> demuxer = std::make_shared<Demuxer>(file_path);
   demuxer->init();
   auto video_index = demuxer->getVideoIndex();
   auto audio_index = demuxer->getAudioIndex();
   auto fmt_ctx = demuxer->getFormatContext();
   std::shared_ptr<Decoder> video_decoder =
-      make_shared<Decoder>(video_index, fmt_ctx);
+      std::make_shared<Decoder>(video_index, fmt_ctx);
   std::shared_ptr<Decoder> audio_decoder =
       make_shared<Decoder>(audio_index, fmt_ctx);
   video_decoder->init();

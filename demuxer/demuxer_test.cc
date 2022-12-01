@@ -15,7 +15,11 @@ int main(int argc, char *argv[]) {
   }
   std::string file_path = argv[1];
   std::shared_ptr<Demuxer> demuxer = make_shared<Demuxer>(file_path);
-  demuxer->init();
+  if (
+      demuxer->init() < 0) {
+      cout << "failed to initialize demuxer" << endl;
+      return 0;
+  };
   std::shared_ptr<AVPacket> packet;
   demuxer->getPacket(packet);
   return 0;
