@@ -26,7 +26,7 @@ conan profile update settings.build_type=Debug playerProfile
 ```
 - 프로젝트 내에 생성된 VisualStudio 폴더를 Visual Studio로 연다.
 
-### Mac & Linux
+### Mac & Ubuntu
 #### 요구 사항
 - brew [https://brew.sh/index_ko](https://brew.sh/index_ko) (Mac)
 - xcode (Mac)
