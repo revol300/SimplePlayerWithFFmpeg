@@ -26,13 +26,15 @@ conan profile update settings.build_type=Debug playerProfile
 ```
 - 프로젝트 내에 생성된 VisualStudio 폴더를 Visual Studio로 연다.
 
-### Mac && Linux
+### Mac & Linux
 #### 요구 사항
-- Conan : [https://docs.conan.io/en/latest/installation.html](https://docs.conan.io/en/latest/installation.html)
+- brew [https://brew.sh/index_ko](https://brew.sh/index_ko) (Mac)
+- xcode (Mac)
+
+다음 스크립트를 통해 git cmake conan 설치
 ```bash
-pip install conan
+brew install conan cmake git
 ```
-** python3의 pip 사용을 권장 **
 
 - 다음 스크립트 실행
 ```bash
@@ -43,4 +45,4 @@ pip install conan
 ```bash
 ./xcode_build.sh
 ```
-- Xcode 폴더에 Xcode 프로젝트 생성됨 
+- Xcode 폴더에 Xcode 프로젝트 생성됨
