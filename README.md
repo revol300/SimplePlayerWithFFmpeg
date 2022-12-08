@@ -29,7 +29,7 @@ conan profile update settings.build_type=Debug playerProfile
 ### Mac & Ubuntu
 #### 요구 사항
 - brew [https://brew.sh/index_ko](https://brew.sh/index_ko) (Mac)
-- xcode (Mac)
+- xcode [https://developer.apple.com/kr/xcode/](https://developer.apple.com/kr/xcode/) (Mac)
 
 다음 스크립트를 통해 git cmake conan gcc(Ubuntu) 설치
 
@@ -45,6 +45,10 @@ apt install conan cmake git gcc
 
 - 다음 스크립트 실행
 ```bash
+conan remote add bincrafters https://bincrafters.jfrog.io/artifactory/api/conan/public-conan
+conan config set general.revisions_enabled=1
+conan profile new playerProfile --detect
+conan profile update settings.build_type=Debug playerProfile
 ./build.sh
 ```
 - 프로젝트 내의  build/bin에 실행파일이 생성됨
