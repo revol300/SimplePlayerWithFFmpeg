@@ -7,3 +7,7 @@ pushd ${PROJECT_PATH}/build
   cmake ${PROJECT_PATH}
   make -j9
 popd
+if [[ -f "compile_commands.json" ]]; then
+  rm compile_commands.json
+fi
+ln -s build/compile_commands.json .

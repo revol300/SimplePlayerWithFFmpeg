@@ -3,3 +3,4 @@ tags
 xcode
 build
 VisualStudio
+compile_commands.json
